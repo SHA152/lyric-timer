@@ -98,6 +98,18 @@
 }
 .issues .issue-link:hover { text-decoration: underline; }
 .issues .more { color: #64748b; font-size: 12px; padding-top: 4px; }
+.issues .fix-btn {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: #fbbf24;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 6px;
+  font: inherit;
+}
+.issues .fix-btn:hover { background: rgba(251, 191, 36, 0.25); }
 
 .lines {
   max-height: 55vh;

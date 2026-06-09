@@ -128,19 +128,47 @@ export default function ReviewApp({ embedded }: Props) {
       if (!p) return p;
       const lines = p.lines.map((l, li) => {
         if (li !== lineIdx) return l;
-        const words = l.words.map((w, wi) => {
-          if (wi !== wordIdx) return w;
-          return { ...w, startSec: Math.max(0, newStart) };
-        });
-        // Adjust prev word's end to new start (no overlap)
+        const words = l.words.map((w) => ({ ...w }));
+        const target = words[wordIdx];
+        const dur = Math.max(0.05, target.endSec - target.startSec);
+        // Clamp newStart so we never go below 0 or above the next word's start - 0.05
+        let clampedStart = Math.max(0, newStart);
+        // Don't allow crossing previous word's start (prevents zero-dur on prev)
+        if (wordIdx > 0) {
+          clampedStart = Math.max(clampedStart, words[wordIdx - 1].startSec + 0.05);
+        }
+        // Don't allow crossing next word's start (prevents overshoot)
+        if (wordIdx < words.length - 1) {
+          clampedStart = Math.min(clampedStart, words[wordIdx + 1].startSec - 0.05);
+        }
+        words[wordIdx] = {
+          ...target,
+          startSec: Math.round(clampedStart * 1000) / 1000,
+          // Preserve the word's duration as the user nudges — less surprising than
+          // collapsing it to the next word's start
+          endSec: Math.round((clampedStart + dur) * 1000) / 1000,
+        };
+        // Adjust prev word's end to NOT overlap (but never to zero duration)
         if (wordIdx > 0) {
           const prev = words[wordIdx - 1];
-          if (prev.endSec > newStart) words[wordIdx - 1] = { ...prev, endSec: newStart };
+          if (prev.endSec > clampedStart) {
+            words[wordIdx - 1] = {
+              ...prev,
+              endSec: Math.max(prev.startSec + 0.05, clampedStart),
+            };
+          }
+        }
+        // Adjust next word's start if our new end overlaps it
+        if (wordIdx < words.length - 1) {
+          const next = words[wordIdx + 1];
+          if (words[wordIdx].endSec > next.startSec) {
+            words[wordIdx].endSec = Math.max(words[wordIdx].startSec + 0.05, next.startSec);
+          }
         }
         return {
           ...l,
-          startSec: words[0].startSec,
-          endSec: Math.max(...words.map((w) => w.endSec)),
+          startSec: Math.min(...words.map((w) => w.startSec)),
+          endSec:   Math.max(...words.map((w) => w.endSec)),
           words,
         };
       });
@@ -160,6 +188,40 @@ export default function ReviewApp({ embedded }: Props) {
     const j = await r.json();
     if (j.ok) { setStatus('✓ Saved'); setDirty(false); }
     else setStatus('Save failed: ' + (j.error || 'unknown'));
+  }
+
+  // Spread a collapsed line's words evenly across its time slot.
+  // Used by the 'spread' button next to collapsed-line issues.
+  function spreadLine(lineIdx: number) {
+    setProject((p) => {
+      if (!p) return p;
+      const lines = p.lines.map((l, li) => {
+        if (li !== lineIdx) return l;
+        const n = l.words.length;
+        if (n === 0) return l;
+        // Slot: from line.startSec to the start of the NEXT non-empty line (or line.endSec)
+        let slotStart = l.startSec;
+        let slotEnd = l.endSec;
+        // If line is fully collapsed (start == end), pull slot from neighbors
+        if (slotEnd - slotStart < 0.2) {
+          const prev = p.lines.slice(0, lineIdx).reverse().find((x) => x.endSec > 0);
+          const next = p.lines.slice(lineIdx + 1).find((x) => x.startSec > slotStart);
+          if (prev) slotStart = prev.endSec + 0.1;
+          if (next) slotEnd   = next.startSec - 0.05;
+          if (slotEnd <= slotStart) slotEnd = slotStart + n * 0.4;
+        }
+        const step = (slotEnd - slotStart) / n;
+        const words = l.words.map((w, i) => ({
+          ...w,
+          startSec: Math.round((slotStart + step * i) * 1000) / 1000,
+          endSec:   Math.round((slotStart + step * (i + 1)) * 1000) / 1000,
+        }));
+        return { ...l, startSec: words[0].startSec, endSec: words[n - 1].endSec, words };
+      });
+      return { ...p, lines };
+    });
+    setDirty(true);
+    setStatus(`Spread line ${lineIdx + 1}; review and adjust individual words if needed.`);
   }
 
   async function rerender() {
@@ -246,6 +308,15 @@ export default function ReviewApp({ embedded }: Props) {
                     >
                       ▸ {iss.message}
                     </button>
+                    {iss.kind === 'collapsed-line' && (
+                      <button
+                        className="fix-btn"
+                        title="Auto-spread this line's words across its time slot"
+                        onClick={() => spreadLine(iss.lineIndex)}
+                      >
+                        ⚡ spread
+                      </button>
+                    )}
                   </li>
                 ))}
                 {issues.length > 10 && <li className="more">…and {issues.length - 10} more</li>}
@@ -273,14 +344,16 @@ export default function ReviewApp({ embedded }: Props) {
                         <button
                           key={wi}
                           className={`word ${active ? 'word-active' : ''} ${past ? 'word-past' : ''} ${isSelected ? 'word-selected' : ''} ${issueLevel ? 'word-issue' : ''}`}
-                          title={`${w.startSec.toFixed(2)}-${w.endSec.toFixed(2)}s${issueLevel ? ' · ' + issueLevel.message : ''}`}
+                          title={`"${w.text}" | ${w.startSec.toFixed(2)}s → ${w.endSec.toFixed(2)}s (${(w.endSec - w.startSec).toFixed(2)}s)${issueLevel ? '\n⚠ ' + issueLevel.message : ''}`}
                           onClick={() => {
                             setSelected({ line: li, word: wi });
                             seekTo(w.startSec);
                           }}
                         >
                           {w.text}
-                          <span className="word-time">{w.startSec.toFixed(2)}</span>
+                          <span className="word-time">
+                            {w.startSec.toFixed(2)}–{w.endSec.toFixed(2)}
+                          </span>
                         </button>
                       );
                     })}
