@@ -1,0 +1,168 @@
+.review {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+.review-header h1 { margin: 4px 0 0; font-size: 22px; letter-spacing: -0.3px; font-weight: 600; }
+.review-header .tag { color: #7dd3fc; letter-spacing: 4px; text-transform: uppercase; font-size: 11px; }
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dirty-flag { color: #fbbf24; font-size: 13px; }
+.btn-primary, .btn-secondary, .btn-link {
+  background: #fbbf24;
+  color: #0c1421;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+.btn-secondary { background: var(--panel-2, #1a2332); color: white; border: 1px solid var(--border, #1f2a3a); }
+.btn-link { background: transparent; color: #94a3b8; border: 1px solid transparent; }
+.btn-primary:disabled, .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.card {
+  background: var(--panel, #131a26);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card input[type="file"] {
+  background: var(--panel-2);
+  color: white;
+  border: 1px solid var(--border);
+  padding: 8px;
+  border-radius: 4px;
+  margin: 6px 0 12px;
+  width: 100%;
+}
+
+.waveform {
+  background: var(--panel, #131a26);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel, #131a26);
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+.toolbar button {
+  background: var(--panel-2, #1a2332);
+  color: white;
+  border: 1px solid var(--border, #1f2a3a);
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.toolbar .playhead { font-family: ui-monospace, monospace; color: #fbbf24; font-weight: 600; }
+.toolbar .hint { color: #64748b; font-size: 11px; margin-left: auto; }
+
+.issues {
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid #ef4444;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 4px;
+}
+.issues ul { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.issues .issue-link {
+  background: none;
+  border: 0;
+  color: #fbbf24;
+  text-align: left;
+  cursor: pointer;
+  padding: 2px 0;
+  font: inherit;
+}
+.issues .issue-link:hover { text-decoration: underline; }
+.issues .more { color: #64748b; font-size: 12px; padding-top: 4px; }
+
+.lines {
+  max-height: 55vh;
+  overflow-y: auto;
+  border: 1px solid var(--border, #1f2a3a);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--panel, #131a26);
+}
+.line {
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.line:last-child { border-bottom: 0; }
+.line-active { background: rgba(59, 130, 246, 0.08); border-radius: 4px; }
+.line-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-family: ui-monospace, monospace;
+}
+.line-no { min-width: 24px; }
+.line-section { color: #7dd3fc; text-transform: uppercase; letter-spacing: 1px; }
+.line-time { color: #fbbf24; }
+
+.line-words { display: flex; flex-wrap: wrap; gap: 2px; }
+.word {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid transparent;
+  color: rgba(255,255,255,0.6);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  position: relative;
+}
+.word:hover { background: rgba(255,255,255,0.08); }
+.word-active { background: #3b82f6 !important; color: white; }
+.word-past { color: white; }
+.word-selected { border-color: #fbbf24; }
+.word-issue { background: rgba(239, 68, 68, 0.15); }
+.word .word-time {
+  display: block;
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+  font-family: ui-monospace, monospace;
+  margin-top: 1px;
+}
+
+.status {
+  margin-top: 12px;
+  padding: 10px;
+  background: var(--panel-2, #1a2332);
+  border-radius: 4px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+kbd {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+}
