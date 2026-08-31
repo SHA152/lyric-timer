@@ -121,6 +121,7 @@ kbd {
 
 .word {
   display: inline-block;
+  cursor: pointer;
   padding: 3px 7px;
   margin: 0 2px;
   border: 1px solid transparent;
@@ -134,12 +135,19 @@ kbd {
   background: rgba(59, 130, 246, 0.45);
   color: #f0f6ff;
 }
-/* the word about to be stamped */
+/* stamped but never closed — waiting for a "." */
+.word-open {
+  border-right: 1px dashed rgba(59, 130, 246, 0.9);
+  background: rgba(59, 130, 246, 0.22);
+}
+/* the selected word — the one the keys act on */
 .word-current {
   background: rgba(59, 130, 246, 0.12);
   color: #9dc0ff;
-  border-color: rgba(59, 130, 246, 0.7);
+  border-color: rgba(147, 197, 253, 0.95);
+  box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.45);
 }
+.word-current.word-stamped { color: #f0f6ff; background: rgba(59, 130, 246, 0.5); }
 
 .app-footer {
   margin-top: 16px;

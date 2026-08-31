@@ -91,14 +91,17 @@ export const Timeline = memo(function Timeline() {
   const duration = useStore((s) => s.audioDuration);
   const setWordTime = useStore((s) => s.setWordTime);
   const setLineTimes = useStore((s) => s.setLineTimes);
+  const selectWord = useStore((s) => s.selectWord);
+  const currentLine = useStore((s) => s.currentLine);
+  const currentWord = useStore((s) => s.currentWord);
 
   const [pps, setPps] = useState(80);
-  const [sel, setSel] = useState<{ li: number; wi: number } | null>(null);
   const [view, setView] = useState({ left: 0, width: 0 });
   const ready = lines.length > 0;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const selRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   const scrubRef = useRef(false);
   const rafRef = useRef(0);
@@ -179,6 +182,21 @@ export const Timeline = memo(function Timeline() {
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoom, ready]);
 
+  useEffect(() => {
+    const el = scrollRef.current;
+    const blk = selRef.current;
+    if (!el || !blk) return;
+    blk.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // scrollIntoView leaves the block flush against the edge; keep some track
+    // visible on either side of it.
+    const PAD = 60;
+    const left = blk.offsetLeft;
+    const right = left + blk.offsetWidth;
+    if (left - el.scrollLeft < PAD) el.scrollLeft = Math.max(0, left - PAD);
+    else if (el.scrollLeft + el.clientWidth - right < PAD)
+      el.scrollLeft = right + PAD - el.clientWidth;
+  }, [currentLine, currentWord]);
+
   const timeAtX = useCallback((clientX: number) => {
     const el = canvasRef.current;
     if (!el) return 0;
@@ -222,7 +240,7 @@ export const Timeline = memo(function Timeline() {
         hi: Math.max(...stamped.map(({ i }) => effEnd(line, i))),
       };
       e.currentTarget.setPointerCapture(e.pointerId);
-      setSel(null);
+      selectWord(li, stamped[0].i);
       return;
     }
 
@@ -230,7 +248,7 @@ export const Timeline = memo(function Timeline() {
     if (!w) return;
     dragRef.current = { li, wi, mode, x0: e.clientX, s0: w.startSec, e0: effEnd(line, wi), moved: false };
     e.currentTarget.setPointerCapture(e.pointerId);
-    setSel({ li, wi });
+    selectWord(li, wi);
   };
 
   const onBlockMove = (e: ReactPointerEvent<HTMLElement>) => {
@@ -267,15 +285,11 @@ export const Timeline = memo(function Timeline() {
   };
 
   const onBlockUp = (e: ReactPointerEvent<HTMLElement>) => {
-    const d = dragRef.current;
-    if (!d) return;
+    if (!dragRef.current) return;
     e.stopPropagation();
+    // Selection happened on pointerdown; a click that never moved does nothing
+    // else — picking an element deliberately leaves the playhead where it is.
     dragRef.current = null;
-    // A press that never moved is a click: jump to the word (or the line start).
-    if (!d.moved) {
-      const t = d.mode === 'line' ? d.lo ?? 0 : lines[d.li]?.words[d.wi]?.startSec ?? 0;
-      wsCtrl()?.setTime(t);
-    }
   };
 
   // One shared track: every stamped word sits on the same row, and each line is
@@ -325,7 +339,7 @@ export const Timeline = memo(function Timeline() {
       <div className="timeline-head">
         <span className="tl-title">Timeline</span>
         <span className="tl-hint">
-          word:&nbsp;drag&nbsp;=&nbsp;move, edges&nbsp;=&nbsp;resize · orange&nbsp;box&nbsp;=&nbsp;move whole line · ⌘/Ctrl+wheel&nbsp;=&nbsp;zoom
+          click&nbsp;=&nbsp;select · drag&nbsp;=&nbsp;move, edges&nbsp;=&nbsp;resize · orange&nbsp;box&nbsp;=&nbsp;whole line · ⌘/Ctrl+wheel&nbsp;=&nbsp;zoom
         </span>
         <span className="tl-spacer" />
         <button onClick={() => zoom(1 / 1.5)} title="Zoom out" disabled={pps <= MIN_PPS}>−</button>
@@ -365,7 +379,7 @@ export const Timeline = memo(function Timeline() {
               {layout.groups.map((g) => (
                 <div
                   key={g.li}
-                  className="tl-group"
+                  className={`tl-group${g.li === currentLine ? ' tl-group-sel' : ''}`}
                   style={{
                     left: g.start * pps,
                     width: Math.max((g.end - g.start) * pps, 8),
@@ -385,10 +399,11 @@ export const Timeline = memo(function Timeline() {
               {layout.groups.map((g) =>
                 g.words.map(({ w, wi, end, sub }) => {
                   const open = !(w.endSec > w.startSec);
-                  const isSel = sel?.li === g.li && sel?.wi === wi;
+                  const isSel = g.li === currentLine && wi === currentWord;
                   return (
                     <div
                       key={`${g.li}:${wi}`}
+                      ref={isSel ? selRef : undefined}
                       className={`tl-word${open ? ' tl-word-open' : ''}${isSel ? ' tl-word-sel' : ''}`}
                       style={{
                         left: w.startSec * pps,

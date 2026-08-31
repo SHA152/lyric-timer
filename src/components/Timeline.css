@@ -90,6 +90,10 @@
   touch-action: none;
   user-select: none;
 }
+.tl-group-sel {
+  border-color: rgba(245, 158, 11, 0.95);
+  background: rgba(245, 158, 11, 0.14);
+}
 .tl-group:hover { background: rgba(245, 158, 11, 0.16); border-color: rgba(245, 158, 11, 0.8); }
 .tl-group:active { cursor: grabbing; }
 .tl-group-label {
@@ -130,7 +134,8 @@
 }
 .tl-word-sel {
   border-color: #cfe0ff;
-  box-shadow: 0 0 0 1px rgba(207, 224, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(207, 224, 255, 0.7);
+  z-index: 2;
 }
 
 .tl-handle {

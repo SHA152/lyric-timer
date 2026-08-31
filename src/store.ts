@@ -19,8 +19,12 @@ interface State {
   setPlayhead: (sec: number) => void;
   setPlaying: (p: boolean) => void;
 
+  selectWord: (lineIndex: number, wordIndex: number) => void;
+  stepSelection: (dir: 1 | -1) => void;
   stampNextWord: (timeSec: number) => void;
-  undoLastStamp: () => void;
+  setEndAtSelection: (timeSec: number) => void;
+  setPrevEnd: (timeSec: number) => void;
+  clearAndStepBack: () => void;
   setWordTime: (lineIndex: number, wordIndex: number, startSec: number, endSec: number) => void;
   setLineTimes: (lineIndex: number, times: { startSec: number; endSec: number }[]) => void;
   resetTiming: () => void;
@@ -43,6 +47,36 @@ function parseLyrics(raw: string): Line[] {
         .filter(Boolean)
         .map((w) => ({ text: w, startSec: 0, endSec: 0 })),
     }));
+}
+
+/** Line envelope follows its words — the exporters read startSec/endSec. */
+function syncLine(l: Line) {
+  const starts = l.words.filter((w) => w.startSec > 0).map((w) => w.startSec);
+  const ends = l.words.filter((w) => w.endSec > 0).map((w) => w.endSec);
+  l.startSec = starts.length ? Math.min(...starts) : 0;
+  l.endSec = ends.length ? Math.max(...ends) : 0;
+}
+
+function cloneLines(lines: Line[]): Line[] {
+  return lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
+}
+
+/** Words form one sequence across lines; null means we're at an end of it. */
+function seqStep(lines: Line[], li: number, wi: number, dir: 1 | -1) {
+  let l = li;
+  let w = wi + dir;
+  for (;;) {
+    if (l < 0 || l >= lines.length) return null;
+    if (w >= 0 && w < lines[l].words.length) return { li: l, wi: w };
+    l += dir;
+    if (l < 0 || l >= lines.length) return null;
+    w = dir > 0 ? 0 : lines[l].words.length - 1;
+  }
+}
+
+/** A word is "closed" once it has both ends; with only a start it's "open". */
+function isClosed(w: { startSec: number; endSec: number }) {
+  return w.startSec > 0 && w.endSec > w.startSec;
 }
 
 export const useStore = create<State>((set, get) => ({
@@ -74,67 +108,105 @@ export const useStore = create<State>((set, get) => ({
   setPlayhead: (sec) => set({ playheadSec: sec }),
   setPlaying: (p) => set({ isPlaying: p }),
 
-  stampNextWord: (timeSec) => {
-    const { lines, currentLine, currentWord } = get();
-    if (currentLine >= lines.length) return;
-    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
-    const line = newLines[currentLine];
-    const word = line.words[currentWord];
-    word.startSec = timeSec;
-
-    // Close the previous word's end time
-    if (currentWord > 0) {
-      line.words[currentWord - 1].endSec = timeSec;
-    } else if (currentLine > 0) {
-      const prevLine = newLines[currentLine - 1];
-      const last = prevLine.words[prevLine.words.length - 1];
-      if (last && last.endSec === 0) last.endSec = timeSec;
-      prevLine.endSec = timeSec;
-    }
-    if (currentWord === 0) {
-      line.startSec = timeSec;
-    }
-
-    let nextLine = currentLine;
-    let nextWord = currentWord + 1;
-    if (nextWord >= line.words.length) {
-      nextLine = currentLine + 1;
-      nextWord = 0;
-    }
-    set({ lines: newLines, currentLine: nextLine, currentWord: nextWord });
+  selectWord: (lineIndex, wordIndex) => {
+    const { lines } = get();
+    if (!lines[lineIndex]?.words[wordIndex]) return;
+    set({ currentLine: lineIndex, currentWord: wordIndex });
   },
 
-  undoLastStamp: () => {
+  stepSelection: (dir) => {
     const { lines, currentLine, currentWord } = get();
+    const next = seqStep(lines, currentLine, currentWord, dir);
+    if (next) set({ currentLine: next.li, currentWord: next.wi });
+  },
 
-    // The last stamped word is the one right before the cursor.
-    let targetLine = currentLine;
-    let targetWord = currentWord - 1;
-    if (targetWord < 0) {
-      targetLine = currentLine - 1;
-      if (targetLine < 0) return;
-      targetWord = lines[targetLine].words.length - 1;
-      if (targetWord < 0) return;
-    }
-    if (targetLine >= lines.length) return;
+  /**
+   * Space on the selected word. A word that is already closed is left alone and
+   * just walked past; otherwise its start is (re)stamped. Writing a start also
+   * closes the immediately preceding word if that one is still open — but only
+   * that one, so stamping after a jump can't glue a distant word shut.
+   */
+  stampNextWord: (timeSec) => {
+    const { lines, currentLine, currentWord } = get();
+    const word = lines[currentLine]?.words[currentWord];
+    if (!word) return;
 
-    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
-    const line = newLines[targetLine];
-    line.words[targetWord].startSec = 0;
-    line.words[targetWord].endSec = 0;
-    if (targetWord === 0) line.startSec = 0;
+    const next = seqStep(lines, currentLine, currentWord, 1);
+    const moved = next ? { currentLine: next.li, currentWord: next.wi } : {};
 
-    // Re-open the end time that stamping this word had closed.
-    if (targetWord > 0) {
-      line.words[targetWord - 1].endSec = 0;
-    } else if (targetLine > 0) {
-      const prevLine = newLines[targetLine - 1];
-      const last = prevLine.words[prevLine.words.length - 1];
-      if (last) last.endSec = 0;
-      prevLine.endSec = 0;
+    if (isClosed(word)) {
+      set(moved);
+      return;
     }
 
-    set({ lines: newLines, currentLine: targetLine, currentWord: targetWord });
+    const newLines = cloneLines(lines);
+    newLines[currentLine].words[currentWord].startSec = timeSec;
+
+    const prev = seqStep(lines, currentLine, currentWord, -1);
+    if (prev) {
+      const p = newLines[prev.li].words[prev.wi];
+      if (p.startSec > 0 && p.endSec === 0 && timeSec > p.startSec) {
+        p.endSec = timeSec;
+        syncLine(newLines[prev.li]);
+      }
+    }
+    syncLine(newLines[currentLine]);
+
+    set({ lines: newLines, ...moved });
+  },
+
+  /** "." — pin the end of the selected word at the playhead and move on. */
+  setEndAtSelection: (timeSec) => {
+    const { lines, currentLine, currentWord } = get();
+    const word = lines[currentLine]?.words[currentWord];
+    // Nothing to close without a start, and an end before the start is nonsense.
+    if (!word || word.startSec <= 0 || timeSec <= word.startSec) return;
+
+    const newLines = cloneLines(lines);
+    newLines[currentLine].words[currentWord].endSec = timeSec;
+    syncLine(newLines[currentLine]);
+
+    const next = seqStep(lines, currentLine, currentWord, 1);
+    set({ lines: newLines, ...(next ? { currentLine: next.li, currentWord: next.wi } : {}) });
+  },
+
+  /**
+   * "," — pin the end of the word *before* the selection, so a tail can be
+   * closed without leaving the spot you're working at. Only touches a word that
+   * already has a start; the selection doesn't move.
+   */
+  setPrevEnd: (timeSec) => {
+    const { lines, currentLine, currentWord } = get();
+    const prev = seqStep(lines, currentLine, currentWord, -1);
+    if (!prev) return;
+    const word = lines[prev.li].words[prev.wi];
+    if (word.startSec <= 0 || timeSec <= word.startSec) return;
+
+    const newLines = cloneLines(lines);
+    newLines[prev.li].words[prev.wi].endSec = timeSec;
+    syncLine(newLines[prev.li]);
+    set({ lines: newLines });
+  },
+
+  /**
+   * Backspace: wipe whatever the selected word holds and step back. Neighbours
+   * are left untouched — an end written earlier stays where the user put it.
+   */
+  clearAndStepBack: () => {
+    const { lines, currentLine, currentWord } = get();
+    const word = lines[currentLine]?.words[currentWord];
+    const prev = seqStep(lines, currentLine, currentWord, -1);
+    const moved = prev ? { currentLine: prev.li, currentWord: prev.wi } : {};
+
+    if (word && (word.startSec > 0 || word.endSec > 0)) {
+      const newLines = cloneLines(lines);
+      newLines[currentLine].words[currentWord].startSec = 0;
+      newLines[currentLine].words[currentWord].endSec = 0;
+      syncLine(newLines[currentLine]);
+      set({ lines: newLines, ...moved });
+      return;
+    }
+    set(moved);
   },
 
   /**
@@ -153,15 +225,10 @@ export const useStore = create<State>((set, get) => ({
     let e = Math.min(Math.max(endSec, s + MIN), max);
     if (e - s < MIN) s = Math.max(0, e - MIN);
 
-    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
-    const nl = newLines[lineIndex];
-    nl.words[wordIndex].startSec = s;
-    nl.words[wordIndex].endSec = e;
-
-    const starts = nl.words.filter((w) => w.startSec > 0).map((w) => w.startSec);
-    const ends = nl.words.filter((w) => w.endSec > 0).map((w) => w.endSec);
-    nl.startSec = starts.length ? Math.min(...starts) : 0;
-    nl.endSec = ends.length ? Math.max(...ends) : 0;
+    const newLines = cloneLines(lines);
+    newLines[lineIndex].words[wordIndex].startSec = s;
+    newLines[lineIndex].words[wordIndex].endSec = e;
+    syncLine(newLines[lineIndex]);
 
     set({ lines: newLines });
   },
@@ -176,19 +243,14 @@ export const useStore = create<State>((set, get) => ({
     const line = lines[lineIndex];
     if (!line) return;
 
-    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
-    const nl = newLines[lineIndex];
-    nl.words.forEach((w, i) => {
+    const newLines = cloneLines(lines);
+    newLines[lineIndex].words.forEach((w, i) => {
       const t = times[i];
       if (!t) return;
       w.startSec = t.startSec;
       w.endSec = t.endSec;
     });
-
-    const starts = nl.words.filter((w) => w.startSec > 0).map((w) => w.startSec);
-    const ends = nl.words.filter((w) => w.endSec > 0).map((w) => w.endSec);
-    nl.startSec = starts.length ? Math.min(...starts) : 0;
-    nl.endSec = ends.length ? Math.max(...ends) : 0;
+    syncLine(newLines[lineIndex]);
 
     set({ lines: newLines });
   },

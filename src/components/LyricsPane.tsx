@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 
 export function LyricsPane() {
-  const { lines, currentLine, currentWord, lyricsRaw, setLyricsRaw, rebuildLinesFromRaw } = useStore();
+  const { lines, currentLine, currentWord, selectWord, lyricsRaw, setLyricsRaw, rebuildLinesFromRaw } =
+    useStore();
   const activeRef = useRef<HTMLDivElement>(null);
 
   // Keep the line being timed inside the scrollable pane.
@@ -39,12 +40,21 @@ export function LyricsPane() {
           <span className="line-text">
             {line.words.map((w, wi) => {
               const stamped = w.startSec > 0;
-              const isCurrent = li === currentLine && wi === currentWord;
+              // started but never closed — the one "." is for
+              const open = stamped && !(w.endSec > w.startSec);
+              const selected = li === currentLine && wi === currentWord;
               return (
                 <span
                   key={wi}
-                  className={`word ${stamped ? 'word-stamped' : ''} ${isCurrent ? 'word-current' : ''}`}
-                  title={stamped ? `${w.startSec.toFixed(2)}s` : 'not stamped'}
+                  className={`word ${stamped ? 'word-stamped' : ''} ${open ? 'word-open' : ''} ${
+                    selected ? 'word-current' : ''
+                  }`}
+                  title={
+                    stamped
+                      ? `${w.startSec.toFixed(2)}s → ${open ? 'open' : `${w.endSec.toFixed(2)}s`}`
+                      : 'not stamped'
+                  }
+                  onClick={() => selectWord(li, wi)}
                 >
                   {w.text}
                 </span>

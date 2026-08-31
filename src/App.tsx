@@ -9,7 +9,16 @@ import { wsCtrl } from './components/Waveform';
 import './App.css';
 
 export default function App() {
-  const { audioUrl, playheadSec, stampNextWord, undoLastStamp, lines } = useStore();
+  const {
+    audioUrl,
+    playheadSec,
+    stampNextWord,
+    setEndAtSelection,
+    setPrevEnd,
+    clearAndStepBack,
+    stepSelection,
+    lines,
+  } = useStore();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -37,6 +46,27 @@ export default function App() {
         return;
       }
 
+      // Q/E walk the selection without touching anything. Matched on code so
+      // they still work on a non-latin layout.
+      if (e.code === 'KeyQ' || e.code === 'KeyE') {
+        e.preventDefault();
+        stepSelection(e.code === 'KeyQ' ? -1 : 1);
+        return;
+      }
+
+      // "." and "," live on Slash in the russian layout, so accept either signal.
+      if (e.code === 'Period' || e.key === '.') {
+        e.preventDefault();
+        setEndAtSelection(playheadSec);
+        return;
+      }
+
+      if (e.code === 'Comma' || e.key === ',') {
+        e.preventDefault();
+        setPrevEnd(playheadSec);
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         const ws = wsCtrl();
@@ -45,20 +75,33 @@ export default function App() {
         stampNextWord(playheadSec);
       } else if (e.code === 'Backspace') {
         e.preventDefault();
-        undoLastStamp();
+        clearAndStepBack();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [playheadSec, stampNextWord, undoLastStamp, lines.length]);
+  }, [
+    playheadSec,
+    stampNextWord,
+    setEndAtSelection,
+    setPrevEnd,
+    clearAndStepBack,
+    stepSelection,
+    lines.length,
+  ]);
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>lyric-timer</h1>
-        <p className="tagline">Per-word lyric timing. Press <kbd>Space</kbd> on each word as it plays, <kbd>Backspace</kbd> to undo,{' '}
-          <kbd>Enter</kbd> to play/pause. <kbd>←</kbd>/<kbd>→</kbd> seek 1s —{' '}
-          <kbd>⌥</kbd>/<kbd>Ctrl</kbd> for 0.1s, <kbd>Shift</kbd> for 5s.</p>
+        <p className="tagline">
+          Per-word lyric timing. <kbd>Space</kbd> stamps the selected word and moves on,{' '}
+          <kbd>.</kbd> pins its end and <kbd>,</kbd> the previous word's,{' '}
+          <kbd>Backspace</kbd> clears it and steps back,{' '}
+          <kbd>Q</kbd>/<kbd>E</kbd> move the selection. <kbd>Enter</kbd> plays/pauses,{' '}
+          <kbd>←</kbd>/<kbd>→</kbd> seek 1s — <kbd>⌥</kbd>/<kbd>Ctrl</kbd> for 0.1s,{' '}
+          <kbd>Shift</kbd> for 5s.
+        </p>
       </header>
 
       {!audioUrl ? (
