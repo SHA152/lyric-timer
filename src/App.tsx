@@ -18,7 +18,20 @@ export default function App() {
     clearAndStepBack,
     stepSelection,
     lines,
+    lyricsRaw,
   } = useStore();
+
+  // Timing lives in memory only, so a stray back gesture or a closed tab throws
+  // the whole take away. Arm the browser's own confirm as soon as there's work.
+  useEffect(() => {
+    if (lines.length === 0 && lyricsRaw.trim().length === 0) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ''; // older browsers only prompt when this is set
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [lines.length, lyricsRaw]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
