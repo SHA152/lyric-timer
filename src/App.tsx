@@ -8,27 +8,34 @@ import { wsCtrl } from './components/Waveform';
 import './App.css';
 
 export default function App() {
-  const { audioUrl, playheadSec, stampNextWord, lines } = useStore();
+  const { audioUrl, playheadSec, stampNextWord, undoLastStamp, lines } = useStore();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && lines.length > 0 && (e.target as HTMLElement)?.tagName !== 'TEXTAREA') {
+      if (lines.length === 0) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+
+      if (e.code === 'Space') {
         e.preventDefault();
         const ws = wsCtrl();
         if (!ws) return;
         if (!ws.isPlaying()) ws.play();
         stampNextWord(playheadSec);
+      } else if (e.code === 'Backspace') {
+        e.preventDefault();
+        undoLastStamp();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [playheadSec, stampNextWord, lines.length]);
+  }, [playheadSec, stampNextWord, undoLastStamp, lines.length]);
 
   return (
     <div className="app">
       <header className="app-header">
         <h1>lyric-timer</h1>
-        <p className="tagline">Per-word lyric timing. Press <kbd>Space</kbd> on each word as it plays.</p>
+        <p className="tagline">Per-word lyric timing. Press <kbd>Space</kbd> on each word as it plays, <kbd>Backspace</kbd> to undo.</p>
       </header>
 
       {!audioUrl ? (

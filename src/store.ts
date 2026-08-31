@@ -20,6 +20,7 @@ interface State {
   setPlaying: (p: boolean) => void;
 
   stampNextWord: (timeSec: number) => void;
+  undoLastStamp: () => void;
   resetTiming: () => void;
   loadProject: (p: LyricProject) => void;
   toJSON: () => LyricProject;
@@ -99,6 +100,39 @@ export const useStore = create<State>((set, get) => ({
       nextWord = 0;
     }
     set({ lines: newLines, currentLine: nextLine, currentWord: nextWord });
+  },
+
+  undoLastStamp: () => {
+    const { lines, currentLine, currentWord } = get();
+
+    // The last stamped word is the one right before the cursor.
+    let targetLine = currentLine;
+    let targetWord = currentWord - 1;
+    if (targetWord < 0) {
+      targetLine = currentLine - 1;
+      if (targetLine < 0) return;
+      targetWord = lines[targetLine].words.length - 1;
+      if (targetWord < 0) return;
+    }
+    if (targetLine >= lines.length) return;
+
+    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
+    const line = newLines[targetLine];
+    line.words[targetWord].startSec = 0;
+    line.words[targetWord].endSec = 0;
+    if (targetWord === 0) line.startSec = 0;
+
+    // Re-open the end time that stamping this word had closed.
+    if (targetWord > 0) {
+      line.words[targetWord - 1].endSec = 0;
+    } else if (targetLine > 0) {
+      const prevLine = newLines[targetLine - 1];
+      const last = prevLine.words[prevLine.words.length - 1];
+      if (last) last.endSec = 0;
+      prevLine.endSec = 0;
+    }
+
+    set({ lines: newLines, currentLine: targetLine, currentWord: targetWord });
   },
 
   resetTiming: () =>
