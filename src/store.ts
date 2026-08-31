@@ -21,6 +21,8 @@ interface State {
 
   stampNextWord: (timeSec: number) => void;
   undoLastStamp: () => void;
+  setWordTime: (lineIndex: number, wordIndex: number, startSec: number, endSec: number) => void;
+  setLineTimes: (lineIndex: number, times: { startSec: number; endSec: number }[]) => void;
   resetTiming: () => void;
   loadProject: (p: LyricProject) => void;
   toJSON: () => LyricProject;
@@ -133,6 +135,62 @@ export const useStore = create<State>((set, get) => ({
     }
 
     set({ lines: newLines, currentLine: targetLine, currentWord: targetWord });
+  },
+
+  /**
+   * Move/resize a single word from the timeline. Times are clamped to the track
+   * and to a minimum width; the line envelope is recomputed because the
+   * exporters read line.startSec/endSec.
+   */
+  setWordTime: (lineIndex, wordIndex, startSec, endSec) => {
+    const { lines, audioDuration } = get();
+    const line = lines[lineIndex];
+    if (!line || !line.words[wordIndex]) return;
+
+    const MIN = 0.02;
+    const max = audioDuration > 0 ? audioDuration : Number.POSITIVE_INFINITY;
+    let s = Math.min(Math.max(startSec, 0), max);
+    let e = Math.min(Math.max(endSec, s + MIN), max);
+    if (e - s < MIN) s = Math.max(0, e - MIN);
+
+    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
+    const nl = newLines[lineIndex];
+    nl.words[wordIndex].startSec = s;
+    nl.words[wordIndex].endSec = e;
+
+    const starts = nl.words.filter((w) => w.startSec > 0).map((w) => w.startSec);
+    const ends = nl.words.filter((w) => w.endSec > 0).map((w) => w.endSec);
+    nl.startSec = starts.length ? Math.min(...starts) : 0;
+    nl.endSec = ends.length ? Math.max(...ends) : 0;
+
+    set({ lines: newLines });
+  },
+
+  /**
+   * Absolute rewrite of one line's word times — used when the whole line is
+   * dragged on the timeline. Absolute (not a delta) so a drag can be replayed
+   * from its starting snapshot without accumulating rounding error.
+   */
+  setLineTimes: (lineIndex, times) => {
+    const { lines } = get();
+    const line = lines[lineIndex];
+    if (!line) return;
+
+    const newLines = lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
+    const nl = newLines[lineIndex];
+    nl.words.forEach((w, i) => {
+      const t = times[i];
+      if (!t) return;
+      w.startSec = t.startSec;
+      w.endSec = t.endSec;
+    });
+
+    const starts = nl.words.filter((w) => w.startSec > 0).map((w) => w.startSec);
+    const ends = nl.words.filter((w) => w.endSec > 0).map((w) => w.endSec);
+    nl.startSec = starts.length ? Math.min(...starts) : 0;
+    nl.endSec = ends.length ? Math.max(...ends) : 0;
+
+    set({ lines: newLines });
   },
 
   resetTiming: () =>

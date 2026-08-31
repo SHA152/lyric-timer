@@ -3,6 +3,7 @@ import { useStore } from './store';
 import { AudioPicker } from './components/AudioPicker';
 import { Waveform } from './components/Waveform';
 import { LyricsPane } from './components/LyricsPane';
+import { Timeline } from './components/Timeline';
 import { Toolbar } from './components/Toolbar';
 import { wsCtrl } from './components/Waveform';
 import './App.css';
@@ -65,6 +66,7 @@ export default function App() {
       ) : (
         <>
           <Waveform audioUrl={audioUrl} />
+          <Timeline />
           <Toolbar />
           <div className="main-grid">
             <LyricsPane />
