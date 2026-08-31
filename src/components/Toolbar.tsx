@@ -1,6 +1,6 @@
 import { useStore } from '../store';
 import { wsCtrl } from './Waveform';
-import { toJSON, toLRC, toSRT, download } from '../export';
+import { toJSON, toLRC, toEnhancedLRC, toSRT, toWordSRT, download } from '../export';
 
 export function Toolbar() {
   const { isPlaying, lines, resetTiming, toJSON: projJSON, audioFile } = useStore();
@@ -25,8 +25,22 @@ export function Toolbar() {
       <button onClick={() => download(`${base}.lrc`, toLRC(projJSON()))} disabled={lines.length === 0}>
         ⬇ LRC
       </button>
+      <button
+        onClick={() => download(`${base}.word.lrc`, toEnhancedLRC(projJSON()))}
+        disabled={lines.length === 0}
+        title="Enhanced LRC (A2) — per-word timestamps"
+      >
+        ⬇ LRC<sup>+</sup>
+      </button>
       <button onClick={() => download(`${base}.srt`, toSRT(projJSON()))} disabled={lines.length === 0}>
         ⬇ SRT
+      </button>
+      <button
+        onClick={() => download(`${base}.word.srt`, toWordSRT(projJSON()))}
+        disabled={lines.length === 0}
+        title="SRT with one cue per word"
+      >
+        ⬇ SRT<sup>+</sup>
       </button>
     </div>
   );

@@ -1,7 +1,14 @@
+import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 
 export function LyricsPane() {
   const { lines, currentLine, currentWord, lyricsRaw, setLyricsRaw, rebuildLinesFromRaw } = useStore();
+  const activeRef = useRef<HTMLDivElement>(null);
+
+  // Keep the line being timed inside the scrollable pane.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [currentLine, currentWord]);
 
   if (lines.length === 0) {
     return (
@@ -23,7 +30,11 @@ export function LyricsPane() {
   return (
     <div className="lyrics-pane">
       {lines.map((line, li) => (
-        <div key={li} className={`line ${li === currentLine ? 'line-active' : ''}`}>
+        <div
+          key={li}
+          ref={li === currentLine ? activeRef : undefined}
+          className={`line ${li === currentLine ? 'line-active' : ''}`}
+        >
           <span className="line-no">{li + 1}</span>
           <span className="line-text">
             {line.words.map((w, wi) => {
