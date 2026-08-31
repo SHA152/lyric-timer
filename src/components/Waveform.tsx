@@ -31,6 +31,7 @@ export function Waveform({ audioUrl }: Props) {
     ws.on('ready', () => setDuration(ws.getDuration()));
     ws.on('audioprocess', (t) => setPlayhead(t));
     ws.on('seeking', (t) => setPlayhead(t));
+    ws.on('timeupdate', (t) => setPlayhead(t));
     ws.on('play', () => setPlaying(true));
     ws.on('pause', () => setPlaying(false));
     ws.on('finish', () => setPlaying(false));
