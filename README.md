@@ -13,14 +13,43 @@ Built because every existing tool is either paywalled, abandoned, or designed ar
 - 💾 Auto-saves to your browser; no server, no account, no tracking
 - 🤖 (Coming) Optional WhisperX auto-alignment for a first-pass draft
 
-## Quick start
+## Install
+
+### Desktop app (no Node, no npm)
+
+Grab an installer from the [Releases](https://github.com/abesmon/lyric-timer/releases) page:
+
+| OS | File |
+|---|---|
+| macOS 10.15+ (Intel & Apple Silicon) | `Lyric Timer_x.y.z_universal.dmg` |
+| Windows 10/11 x64 | `Lyric Timer_x.y.z_x64-setup.exe` (or the `.msi`) |
+
+The builds are **not code-signed**, so the OS will warn you on first launch:
+
+- **macOS** — right-click the app → *Open* → *Open*, or run once:
+  ```bash
+  xattr -cr "/Applications/Lyric Timer.app"
+  ```
+- **Windows** — SmartScreen → *More info* → *Run anyway*
+
+### Browser
+
+The app is pure client-side, so it also runs as a static page — nothing is uploaded anywhere.
+
+## Development
 
 ```bash
 npm install
-npm run dev
+npm run dev        # browser, http://localhost:5173
+npm run app:dev    # desktop app (needs Rust: https://rustup.rs)
+npm run app:build  # installers for the current OS, into src-tauri/target/release/bundle
 ```
 
-Then open the URL Vite prints.
+npm and Rust are **build-time** requirements only — end users need neither.
+
+Tagging a commit `vX.Y.Z` and pushing the tag builds macOS + Windows installers in CI and
+attaches them to a draft GitHub release (`.github/workflows/release.yml`). Bump the version in
+both `package.json` and `src-tauri/tauri.conf.json` before tagging.
 
 ## Usage
 

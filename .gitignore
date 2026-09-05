@@ -34,3 +34,6 @@ coverage/
 # Misc
 *.tsbuildinfo
 .cache/
+
+# Tauri
+src-tauri/target/

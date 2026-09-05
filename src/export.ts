@@ -102,7 +102,22 @@ export function toJSON(p: LyricProject): string {
   return JSON.stringify(p, null, 2);
 }
 
-export function download(filename: string, content: string, mime = 'text/plain') {
+const isTauri = () => typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
+async function saveViaTauri(filename: string, content: string) {
+  const [{ save }, { writeTextFile }] = await Promise.all([
+    import('@tauri-apps/plugin-dialog'),
+    import('@tauri-apps/plugin-fs'),
+  ]);
+  const ext = filename.split('.').pop() ?? '';
+  const path = await save({
+    defaultPath: filename,
+    filters: ext ? [{ name: ext.toUpperCase(), extensions: [ext] }] : [],
+  });
+  if (path) await writeTextFile(path, content);
+}
+
+function saveViaBrowser(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -110,4 +125,14 @@ export function download(filename: string, content: string, mime = 'text/plain')
   a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function download(filename: string, content: string, mime = 'text/plain') {
+  // In the desktop build an <a download> never reaches the OS, so ask Tauri for a
+  // real save dialog; in the browser keep the plain blob download.
+  if (isTauri()) {
+    void saveViaTauri(filename, content);
+    return;
+  }
+  saveViaBrowser(filename, content, mime);
 }
