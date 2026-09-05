@@ -9,7 +9,9 @@ interface Props {
 export function Waveform({ audioUrl }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
-  const { setDuration, setPlayhead, setPlaying } = useStore();
+  const setDuration = useStore((s) => s.setDuration);
+  const setPlayhead = useStore((s) => s.setPlayhead);
+  const setPlaying = useStore((s) => s.setPlaying);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -29,9 +31,10 @@ export function Waveform({ audioUrl }: Props) {
     wsRef.current = ws;
 
     ws.on('ready', () => setDuration(ws.getDuration()));
-    ws.on('audioprocess', (t) => setPlayhead(t));
-    ws.on('seeking', (t) => setPlayhead(t));
+    // 'audioprocess' and 'timeupdate' carry the same value from the same
+    // per-frame tick, so listening to both just doubled the store writes.
     ws.on('timeupdate', (t) => setPlayhead(t));
+    ws.on('seeking', (t) => setPlayhead(t));
     ws.on('play', () => setPlaying(true));
     ws.on('pause', () => setPlaying(false));
     ws.on('finish', () => setPlaying(false));

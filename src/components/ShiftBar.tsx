@@ -6,12 +6,13 @@ const DEFAULT_MS = 100;
 
 /** Nudge the whole take earlier or later — for a track whose timing is right but offset. */
 export function ShiftBar() {
-  const { lines, shiftAll } = useStore();
+  const lineCount = useStore((s) => s.lines.length);
+  const shiftAll = useStore((s) => s.shiftAll);
   // Kept as text so the field can be emptied while typing; parsed on use.
   const [raw, setRaw] = useState(String(DEFAULT_MS));
 
   const ms = Math.min(Math.max(Math.round(Number(raw)) || 0, 0), MAX_MS);
-  const disabled = lines.length === 0 || ms <= 0;
+  const disabled = lineCount === 0 || ms <= 0;
 
   const shift = (dir: 1 | -1) => shiftAll((dir * ms) / 1000);
 

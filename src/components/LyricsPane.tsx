@@ -2,8 +2,15 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 
 export function LyricsPane() {
-  const { lines, currentLine, currentWord, selectWord, lyricsRaw, setLyricsRaw, rebuildLinesFromRaw } =
-    useStore();
+  // Selected field by field: a bare useStore() re-renders every word span on
+  // each playhead tick, which is pure overhead here — nothing below uses it.
+  const lines = useStore((s) => s.lines);
+  const currentLine = useStore((s) => s.currentLine);
+  const currentWord = useStore((s) => s.currentWord);
+  const selectWord = useStore((s) => s.selectWord);
+  const lyricsRaw = useStore((s) => s.lyricsRaw);
+  const setLyricsRaw = useStore((s) => s.setLyricsRaw);
+  const rebuildLinesFromRaw = useStore((s) => s.rebuildLinesFromRaw);
   const activeRef = useRef<HTMLDivElement>(null);
 
   // Keep the line being timed inside the scrollable pane.

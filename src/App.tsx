@@ -10,34 +10,51 @@ import { ProjectDrop } from './components/ProjectDrop';
 import { wsCtrl } from './components/Waveform';
 import './App.css';
 
+/**
+ * The audio clock at this instant. Every stamp goes through here rather than
+ * through the store's playheadSec, which is only ever as fresh as the last
+ * committed React render — under load that ran 100ms+ behind the audio, and
+ * always behind, so the error was a systematic offset rather than jitter.
+ */
+function stampTime(): number | null {
+  const ws = wsCtrl();
+  return ws ? ws.getCurrentTime() : null;
+}
+
+/** Own subscription, so the per-frame playhead doesn't re-render the app. */
+function PlayheadReadout() {
+  const t = useStore((s) => s.playheadSec);
+  return <strong>{t.toFixed(2)}s</strong>;
+}
+
 export default function App() {
-  const {
-    audioUrl,
-    playheadSec,
-    stampNextWord,
-    setEndAtSelection,
-    setPrevEnd,
-    clearAndStepBack,
-    stepSelection,
-    lines,
-    lyricsRaw,
-  } = useStore();
+  // Selectors, not a bare useStore(): an unselected subscription re-renders this
+  // whole tree on every playhead tick (~60/s), which is what put the render
+  // queue — and with it the stamped times — behind the audio.
+  const audioUrl = useStore((s) => s.audioUrl);
+  const stampNextWord = useStore((s) => s.stampNextWord);
+  const setEndAtSelection = useStore((s) => s.setEndAtSelection);
+  const setPrevEnd = useStore((s) => s.setPrevEnd);
+  const clearAndStepBack = useStore((s) => s.clearAndStepBack);
+  const stepSelection = useStore((s) => s.stepSelection);
+  const lineCount = useStore((s) => s.lines.length);
+  const lyricsRaw = useStore((s) => s.lyricsRaw);
 
   // Timing lives in memory only, so a stray back gesture or a closed tab throws
   // the whole take away. Arm the browser's own confirm as soon as there's work.
   useEffect(() => {
-    if (lines.length === 0 && lyricsRaw.trim().length === 0) return;
+    if (lineCount === 0 && lyricsRaw.trim().length === 0) return;
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = ''; // older browsers only prompt when this is set
     };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
-  }, [lines.length, lyricsRaw]);
+  }, [lineCount, lyricsRaw]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (lines.length === 0) return;
+      if (lineCount === 0) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'TEXTAREA' || tag === 'INPUT') return;
 
@@ -72,13 +89,15 @@ export default function App() {
       // "." and "," live on Slash in the russian layout, so accept either signal.
       if (e.code === 'Period' || e.key === '.') {
         e.preventDefault();
-        setEndAtSelection(playheadSec);
+        const t = stampTime();
+        if (t !== null) setEndAtSelection(t);
         return;
       }
 
       if (e.code === 'Comma' || e.key === ',') {
         e.preventDefault();
-        setPrevEnd(playheadSec);
+        const t = stampTime();
+        if (t !== null) setPrevEnd(t);
         return;
       }
 
@@ -86,8 +105,11 @@ export default function App() {
         e.preventDefault();
         const ws = wsCtrl();
         if (!ws) return;
+        // Read the clock before play(): the stamp is where the audio was when
+        // the key went down, not wherever it has got to by the time we return.
+        const t = ws.getCurrentTime();
         if (!ws.isPlaying()) ws.play();
-        stampNextWord(playheadSec);
+        stampNextWord(t);
       } else if (e.code === 'Backspace') {
         e.preventDefault();
         clearAndStepBack();
@@ -96,13 +118,12 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [
-    playheadSec,
     stampNextWord,
     setEndAtSelection,
     setPrevEnd,
     clearAndStepBack,
     stepSelection,
-    lines.length,
+    lineCount,
   ]);
 
   return (
@@ -132,7 +153,7 @@ export default function App() {
             <LyricsPane />
           </div>
           <footer className="app-footer">
-            Playhead: <strong>{playheadSec.toFixed(2)}s</strong>
+            Playhead: <PlayheadReadout />
           </footer>
         </>
       )}

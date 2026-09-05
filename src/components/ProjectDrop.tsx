@@ -7,7 +7,9 @@ import { parseProject } from '../import';
  * Listens on the window rather than a box, so there's nothing to aim at.
  */
 export function ProjectDrop() {
-  const { loadProject, lines, audioFile } = useStore();
+  const loadProject = useStore((s) => s.loadProject);
+  const lines = useStore((s) => s.lines);
+  const audioFile = useStore((s) => s.audioFile);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // dragenter/leave also fire for every child element the cursor crosses, so
