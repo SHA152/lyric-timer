@@ -381,6 +381,32 @@ kbd {
   box-shadow: 0 0 6px rgba(147, 197, 253, 0.8);
 }
 
+/* --- the selected word, up close --------------------------------------- */
+
+.word-editor .panel-head { border-bottom: 0; }
+/* the text is the point of the row, so it takes whatever the rest doesn't */
+.word-editor .we-text {
+  flex: 1;
+  min-width: 120px;
+  width: auto;
+  font-size: 14px;
+  text-align: left;
+}
+.word-editor .we-num {
+  width: 66px;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  text-align: right;
+}
+.word-editor .we-arrow,
+.word-editor .we-unit { color: var(--muted); font-size: 12px; }
+.word-editor .we-del {
+  border-color: var(--danger);
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.14);
+}
+.word-editor .we-del:hover { background: rgba(239, 68, 68, 0.26); border-color: var(--danger); }
+
 /* Double-clicking the number glues the line onto the one above it. */
 .line-no-merge { cursor: pointer; }
 .line-no-merge:hover { color: #93c5fd; }

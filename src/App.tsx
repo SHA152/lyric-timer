@@ -4,6 +4,7 @@ import { AudioPicker } from './components/AudioPicker';
 import { Waveform } from './components/Waveform';
 import { LyricsPane } from './components/LyricsPane';
 import { Timeline } from './components/Timeline';
+import { WordEditor } from './components/WordEditor';
 import { ExportActions } from './components/ExportActions';
 import { ResetTiming } from './components/ResetTiming';
 import { ProjectDrop } from './components/ProjectDrop';
@@ -160,6 +161,7 @@ export default function App() {
         <>
           <Waveform audioUrl={audioUrl} />
           <Timeline />
+          <WordEditor />
           <div className="panel lyrics-panel">
             <div className="panel-head">
               <span className="panel-title">Lyrics</span>

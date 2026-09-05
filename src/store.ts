@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { Line, LyricProject } from './types';
 
+/** What a freshly inserted word says until it's typed over. */
+export const NEW_WORD = '<>';
+
 /** A word's place in the take: line index + index within that line. */
 export interface WordPos {
   li: number;
@@ -29,6 +32,11 @@ interface State {
   moveWord: (from: WordPos, to: WordPos) => void;
   splitLine: (lineIndex: number, wordIndex: number) => void;
   mergeLineUp: (lineIndex: number) => void;
+  setWordText: (lineIndex: number, wordIndex: number, text: string) => void;
+  setWordStamps: (lineIndex: number, wordIndex: number, startSec: number, endSec: number) => void;
+  insertWord: (lineIndex: number, wordIndex: number) => void;
+  deleteWord: (lineIndex: number, wordIndex: number) => void;
+  nudgeWord: (dir: 1 | -1) => void;
   stepSelection: (dir: 1 | -1) => void;
   stampNextWord: (timeSec: number) => void;
   setEndAtSelection: (timeSec: number) => void;
@@ -226,6 +234,107 @@ export const useStore = create<State>((set, get) => ({
     } else if (currentLine > lineIndex) li -= 1;
 
     set({ ...reflow(newLines), currentLine: li, currentWord: wi });
+  },
+
+  /** Retype one word. Blank is refused — a word with no text is just a gap. */
+  setWordText: (lineIndex, wordIndex, text) => {
+    const { lines } = get();
+    if (!lines[lineIndex]?.words[wordIndex]) return;
+    // Spaces would read back as two words on the next parse, so they're the
+    // one thing the field can't hold.
+    const clean = text.replace(/\s+/g, '');
+    if (!clean) return;
+
+    const newLines = cloneLines(lines);
+    newLines[lineIndex].words[wordIndex].text = clean;
+    set(reflow(newLines));
+  },
+
+  /**
+   * Write one word's stamps straight from the editor's number fields. Unlike
+   * setWordTime — which serves timeline drags — nothing is widened to a minimum
+   * here: typed numbers are taken as typed, and a 0 puts the word back to "not
+   * stamped".
+   */
+  setWordStamps: (lineIndex, wordIndex, startSec, endSec) => {
+    const { lines, audioDuration } = get();
+    if (!lines[lineIndex]?.words[wordIndex]) return;
+
+    const max = audioDuration > 0 ? audioDuration : Number.POSITIVE_INFINITY;
+    const clamp = (t: number) => (Number.isFinite(t) ? Math.min(Math.max(t, 0), max) : 0);
+
+    const newLines = cloneLines(lines);
+    const w = newLines[lineIndex].words[wordIndex];
+    w.startSec = clamp(startSec);
+    w.endSec = clamp(endSec);
+    syncLine(newLines[lineIndex]);
+    set({ lines: newLines });
+  },
+
+  /** Drop an untimed placeholder into a line and hand it the selection. */
+  insertWord: (lineIndex, wordIndex) => {
+    const { lines } = get();
+    const line = lines[lineIndex];
+    if (!line) return;
+    const at = Math.max(0, Math.min(wordIndex, line.words.length));
+
+    const newLines = cloneLines(lines);
+    newLines[lineIndex].words.splice(at, 0, { text: NEW_WORD, startSec: 0, endSec: 0 });
+    set({ ...reflow(newLines), currentLine: lineIndex, currentWord: at });
+  },
+
+  /**
+   * Take a word out of the take entirely. The line goes with it if that was its
+   * last word, and the selection lands on whatever now sits closest.
+   */
+  deleteWord: (lineIndex, wordIndex) => {
+    const { lines } = get();
+    if (!lines[lineIndex]?.words[wordIndex]) return;
+
+    const newLines = cloneLines(lines);
+    newLines[lineIndex].words.splice(wordIndex, 1);
+    const emptied = newLines[lineIndex].words.length === 0;
+    const kept = emptied ? newLines.filter((_, i) => i !== lineIndex) : newLines;
+
+    if (kept.length === 0) {
+      set({ ...reflow(kept), currentLine: 0, currentWord: 0 });
+      return;
+    }
+
+    // Prefer the word that slid into the gap, or the one before it at the end
+    // of a line. If the whole line went, the line that took its place — or the
+    // last one, when the deleted line was the final one.
+    const li = Math.min(lineIndex, kept.length - 1);
+    const wi = emptied ? 0 : Math.min(wordIndex, kept[li].words.length - 1);
+    set({ ...reflow(kept), currentLine: li, currentWord: wi });
+  },
+
+  /**
+   * Shuffle the selected word one slot along. At a line's edge it hops to the
+   * neighbouring line rather than stopping — words are one sequence, and that's
+   * also how a line's first or last word gets re-homed.
+   */
+  nudgeWord: (dir) => {
+    const { lines, currentLine, currentWord, moveWord } = get();
+    const line = lines[currentLine];
+    if (!line?.words[currentWord]) return;
+
+    if (dir < 0) {
+      if (currentWord > 0) moveWord({ li: currentLine, wi: currentWord }, { li: currentLine, wi: currentWord - 1 });
+      else if (currentLine > 0)
+        moveWord(
+          { li: currentLine, wi: currentWord },
+          { li: currentLine - 1, wi: lines[currentLine - 1].words.length },
+        );
+      return;
+    }
+
+    // +2, not +1: the drop index is read before the word is lifted out, so
+    // landing *after* the next word means pointing past it.
+    if (currentWord < line.words.length - 1)
+      moveWord({ li: currentLine, wi: currentWord }, { li: currentLine, wi: currentWord + 2 });
+    else if (currentLine < lines.length - 1)
+      moveWord({ li: currentLine, wi: currentWord }, { li: currentLine + 1, wi: 0 });
   },
 
   stepSelection: (dir) => {

@@ -11,6 +11,7 @@ Built because every existing tool is either paywalled, abandoned, or designed ar
 - ✏️ Edit any timestamp by dragging it on the waveform
 - 🧱 Drag a word in the lyrics pane to re-order it or move it to another line — its timing rides along
 - ✂️ Double-click between two words to split a line; double-click a line number to glue that line onto the one above
+- 🔎 A compact editor for the selected word — retype it, type its start/end in seconds, shuffle it along, insert a `<>` placeholder either side, or delete it
 - 📦 Export to **JSON** (with word-level timing), **LRC** (line-level), or **SRT** (subtitle)
 - 💾 Auto-saves to your browser; no server, no account, no tracking
 - 🤖 (Coming) Optional WhisperX auto-alignment for a first-pass draft
