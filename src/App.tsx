@@ -1,12 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './store';
 import { AudioPicker } from './components/AudioPicker';
 import { Waveform } from './components/Waveform';
 import { LyricsPane } from './components/LyricsPane';
 import { Timeline } from './components/Timeline';
 import { Toolbar } from './components/Toolbar';
-import { ShiftBar } from './components/ShiftBar';
 import { ProjectDrop } from './components/ProjectDrop';
+import { HelpModal } from './components/HelpModal';
 import { wsCtrl } from './components/Waveform';
 import './App.css';
 
@@ -39,6 +39,7 @@ export default function App() {
   const stepSelection = useStore((s) => s.stepSelection);
   const lineCount = useStore((s) => s.lines.length);
   const lyricsRaw = useStore((s) => s.lyricsRaw);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   // Timing lives in memory only, so a stray back gesture or a closed tab throws
   // the whole take away. Arm the browser's own confirm as soon as there's work.
@@ -54,7 +55,22 @@ export default function App() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (lineCount === 0) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+      // F1 is the desktop convention, "?" the web one — take both. Match the
+      // code too, so shift+/ still opens help on a non-latin layout.
+      if (e.key === 'F1' || e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
+        e.preventDefault();
+        setHelpOpen((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (lineCount === 0 || helpOpen) return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'TEXTAREA' || tag === 'INPUT') return;
 
@@ -124,31 +140,26 @@ export default function App() {
     clearAndStepBack,
     stepSelection,
     lineCount,
+    helpOpen,
   ]);
 
   return (
     <div className="app">
       <ProjectDrop />
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       <header className="app-header">
         <h1>lyric-timer</h1>
-        <p className="tagline">
-          Per-word lyric timing. <kbd>Space</kbd> stamps the selected word and moves on,{' '}
-          <kbd>.</kbd> pins its end and <kbd>,</kbd> the previous word's,{' '}
-          <kbd>Backspace</kbd> clears it and steps back,{' '}
-          <kbd>Q</kbd>/<kbd>E</kbd> move the selection. <kbd>Enter</kbd> plays/pauses,{' '}
-          <kbd>←</kbd>/<kbd>→</kbd> seek 1s — <kbd>⌥</kbd>/<kbd>Ctrl</kbd> for 0.1s,{' '}
-          <kbd>Shift</kbd> for 5s.
-        </p>
       </header>
 
       {!audioUrl ? (
+        // Nothing loaded yet: just the drop target. The shortcuts only make
+        // sense once there's a track to press them against.
         <AudioPicker />
       ) : (
         <>
+          <Toolbar onShowHelp={() => setHelpOpen(true)} />
           <Waveform audioUrl={audioUrl} />
           <Timeline />
-          <Toolbar />
-          <ShiftBar />
           <div className="main-grid">
             <LyricsPane />
           </div>

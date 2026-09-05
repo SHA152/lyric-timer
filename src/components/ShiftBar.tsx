@@ -4,7 +4,8 @@ import { useStore } from '../store';
 const MAX_MS = 1000;
 const DEFAULT_MS = 100;
 
-/** Nudge the whole take earlier or later — for a track whose timing is right but offset. */
+/** Nudge the whole take earlier or later — for a track whose timing is right
+ *  but offset. Lives as the footer of the timeline block. */
 export function ShiftBar() {
   const lineCount = useStore((s) => s.lines.length);
   const shiftAll = useStore((s) => s.shiftAll);
@@ -17,7 +18,7 @@ export function ShiftBar() {
   const shift = (dir: 1 | -1) => shiftAll((dir * ms) / 1000);
 
   return (
-    <div className="toolbar shift-bar">
+    <div className="timeline-foot shift-bar">
       <span className="shift-label">Shift all</span>
       <button onClick={() => shift(-1)} disabled={disabled} title={`Move everything ${ms}ms earlier`}>
         ◀

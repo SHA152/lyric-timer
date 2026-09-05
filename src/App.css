@@ -24,8 +24,8 @@ body {
   padding: 24px;
 }
 
-.app-header h1 { margin: 0 0 4px; font-size: 28px; letter-spacing: -0.5px; }
-.app-header .tagline { margin: 0 0 24px; color: var(--muted); }
+.app-header { margin: 0 0 20px; }
+.app-header h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
 kbd {
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -78,27 +78,127 @@ kbd {
 .toolbar button:hover:not(:disabled) { border-color: var(--accent); }
 .toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.shift-bar .shift-label {
-  font-size: 13px;
-  color: var(--muted);
+/* Wide half = the default export, caret = the rest of the family. */
+.split-button { position: relative; display: inline-flex; }
+.split-button .split-main { border-radius: 6px 0 0 6px; }
+.split-button .split-caret {
+  border-radius: 0 6px 6px 0;
+  margin-left: -1px; /* the two halves share one border line */
+  display: flex;
+  align-items: center;
+  /* The glyph is an 18x18 svg — pad it out to a comfortable hit target and
+     stretch to whatever height the wide half ended up at. */
+  padding: 0 7px;
+  align-self: stretch;
 }
-.shift-bar .shift-unit {
-  font-size: 13px;
-  color: var(--muted);
-  margin-left: -2px;
+.split-button.open .split-caret { border-color: var(--accent); background: var(--bg); }
+
+.split-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0; /* the export group sits at the right edge — open inwards */
+  z-index: 50;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
-.shift-bar input {
-  width: 72px;
+.split-menu button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.split-menu button:hover,
+.split-menu button:focus-visible {
+  background: rgba(59, 130, 246, 0.18);
+  outline: none;
+}
+.split-menu .opt-hint {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.toolbar .help-btn {
+  margin-left: 4px; /* a beat of air, so it reads apart from the export family */
+  width: 34px;
+  padding: 8px 0;
+  font-weight: 600;
+}
+
+/* Shortcut reference — hidden until asked for, by button or by ? / F1. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(11, 15, 23, 0.7);
+  backdrop-filter: blur(2px);
+}
+.modal {
+  width: min(100%, 620px);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+.modal:focus { outline: none; }
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-head h2 { margin: 0; flex: 1; font-size: 16px; }
+.modal-close {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 10px;
-  font-family: inherit;
-  font-size: 14px;
-  text-align: center;
+  padding: 4px 9px;
+  font-size: 13px;
+  cursor: pointer;
 }
-.shift-bar input:focus { outline: none; border-color: var(--accent); }
+.modal-close:hover { border-color: var(--accent); }
+
+.help-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.help-table th {
+  padding: 10px 18px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.help-table td {
+  padding: 9px 18px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.help-table tr:last-child td { border-bottom: 0; }
+.help-keys { white-space: nowrap; }
+.help-sep { color: var(--muted); font-size: 12px; }
 
 .main-grid {
   background: var(--panel);

@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useStore } from '../store';
 import { wsCtrl } from './Waveform';
 import type { Line } from '../types';
+import { ShiftBar } from './ShiftBar';
 import './Timeline.css';
 
 const MIN_PPS = 8;
@@ -436,6 +437,8 @@ export const Timeline = memo(function Timeline() {
           <Playhead pps={pps} scrollRef={scrollRef} />
         </div>
       </div>
+
+      <ShiftBar />
     </div>
   );
 });
