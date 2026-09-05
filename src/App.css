@@ -37,6 +37,18 @@ input, textarea {
 .app-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
 .app-bar h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
 .app-bar .help-btn { width: 30px; padding: 4px 0; font-weight: 600; }
+
+/* Version stamp: has to be readable when you go looking for it and invisible
+   the rest of the time, so it sits right-aligned under the content. */
+.app-foot {
+  margin: 16px 0 0;
+  text-align: right;
+  color: var(--muted);
+  opacity: 0.5;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  user-select: text;
+}
 kbd {
   background: var(--panel-2);
   border: 1px solid var(--border);

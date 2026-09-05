@@ -178,6 +178,8 @@ export default function App() {
           </div>
         </>
       )}
+
+      <footer className="app-foot">v{__APP_VERSION__}</footer>
     </div>
   );
 }

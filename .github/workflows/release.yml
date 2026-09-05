@@ -35,6 +35,12 @@ jobs:
           node-version: 22
           cache: npm
 
+      # The tag is the source of truth for a release: tauri-action reads the
+      # version (and names the bundles) from tauri.conf.json, so sync it first
+      # or every asset ships with whatever version happens to be committed.
+      - if: github.ref_type == 'tag'
+        run: node scripts/set-version.mjs ${{ github.ref_name }}
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust_targets }}
