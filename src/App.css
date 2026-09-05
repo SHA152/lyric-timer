@@ -290,7 +290,15 @@ kbd {
 }
 .line-active { background: rgba(59, 130, 246, 0.08); }
 .line-no { color: var(--muted); min-width: 28px; text-align: right; }
-.line-text { flex: 1; }
+/* Flex, not inline flow: the words still wrap like text, but the leftover space
+   on the last row becomes a real element you can point at. */
+.line-text {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
+}
 
 .word {
   display: inline-block;
@@ -406,6 +414,45 @@ kbd {
   background: rgba(239, 68, 68, 0.14);
 }
 .word-editor .we-del:hover { background: rgba(239, 68, 68, 0.26); border-color: var(--danger); }
+
+/* --- the empty space after the last word -------------------------------- */
+
+.line-tail {
+  /* takes the rest of the row, but yields all of it when the line is full so a
+     packed line doesn't wrap an empty strip onto a row of its own */
+  flex: 1 1 24px;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+/* The next brick, drawn where it would land. It holds its place whether or not
+   anyone is looking at it — only its opacity answers the cursor. */
+.ghost-word {
+  display: inline-block;
+  padding: 3px 7px;
+  margin: 0 2px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s, border-color 0.12s;
+  cursor: pointer;
+}
+/* The whole leftover strip brings the brick out of hiding, so it can be found
+   without knowing where it is — but the click lands on the brick alone. */
+.line-tail:hover .ghost-word { opacity: 0.55; }
+.ghost-word:hover {
+  opacity: 1;
+  color: #9dc0ff;
+  border-color: rgba(147, 197, 253, 0.7);
+}
+/* mid-drag the row is a drop target, not a place to add words */
+.lyrics-pane-dragging .line-tail:hover .ghost-word,
+.lyrics-pane-dragging .ghost-word:hover { opacity: 0; cursor: grabbing; }
 
 /* Double-clicking the number glues the line onto the one above it. */
 .line-no-merge { cursor: pointer; }

@@ -19,6 +19,7 @@ export function LyricsPane() {
   const moveWord = useStore((s) => s.moveWord);
   const splitLine = useStore((s) => s.splitLine);
   const mergeLineUp = useStore((s) => s.mergeLineUp);
+  const insertWord = useStore((s) => s.insertWord);
   const lyricsRaw = useStore((s) => s.lyricsRaw);
   const setLyricsRaw = useStore((s) => s.setLyricsRaw);
   const rebuildLinesFromRaw = useStore((s) => s.rebuildLinesFromRaw);
@@ -264,6 +265,19 @@ export function LyricsPane() {
             })}
             {/* the gap past the last word — a drop target, never a cut */}
             {slot(li, line.words.length, line.words.length)}
+            {/* The rest of the row. The brick that would come next is always
+                there, in the slot it would actually take: anywhere in the
+                leftover space fades it in, but only the brick itself answers a
+                double click — the empty stretch past it is just empty. */}
+            <span className="line-tail">
+              <span
+                className="ghost-word"
+                onDoubleClick={() => insertWord(li, line.words.length)}
+                title="Double-click to add a word at the end of the line"
+              >
+                + add word
+              </span>
+            </span>
           </span>
         </div>
       ))}
