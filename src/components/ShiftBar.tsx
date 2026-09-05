@@ -18,7 +18,7 @@ export function ShiftBar() {
   const shift = (dir: 1 | -1) => shiftAll((dir * ms) / 1000);
 
   return (
-    <div className="timeline-foot shift-bar">
+    <div className="panel-foot shift-bar">
       <span className="shift-label">Shift all</span>
       <button onClick={() => shift(-1)} disabled={disabled} title={`Move everything ${ms}ms earlier`}>
         ◀

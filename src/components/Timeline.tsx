@@ -336,13 +336,13 @@ export const Timeline = memo(function Timeline() {
   for (let i = from; i <= to; i++) ticks.push(i * step);
 
   return (
-    <div className="timeline">
-      <div className="timeline-head">
-        <span className="tl-title">Timeline</span>
-        <span className="tl-hint">
+    <div className="panel timeline">
+      <div className="panel-head">
+        <span className="panel-title">Timeline</span>
+        <span className="panel-hint">
           click&nbsp;=&nbsp;select · drag&nbsp;=&nbsp;move, edges&nbsp;=&nbsp;resize · orange&nbsp;box&nbsp;=&nbsp;whole line · ⌘/Ctrl+wheel&nbsp;=&nbsp;zoom
         </span>
-        <span className="tl-spacer" />
+        <span className="panel-spacer" />
         <button onClick={() => zoom(1 / 1.5)} title="Zoom out" disabled={pps <= MIN_PPS}>−</button>
         <span className="tl-zoom">{pps < 100 ? pps.toFixed(1) : Math.round(pps)} px/s</span>
         <button onClick={() => zoom(1.5)} title="Zoom in" disabled={pps >= MAX_PPS}>+</button>

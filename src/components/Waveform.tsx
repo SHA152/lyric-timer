@@ -45,12 +45,39 @@ export function Waveform({ audioUrl }: Props) {
     };
   }, [audioUrl, setDuration, setPlayhead, setPlaying]);
 
-  // expose controls via window for the toolbar (cheap MVP — refactor later)
+  // expose controls via window for the transport button (cheap MVP)
   useEffect(() => {
     (window as unknown as { __ws?: WaveSurfer | null }).__ws = wsRef.current;
   });
 
-  return <div ref={containerRef} className="waveform" />;
+  return (
+    <div className="panel waveform-panel">
+      <div className="panel-head">
+        <PlayPause />
+        <span className="panel-spacer" />
+        <span className="panel-playhead">
+          Playhead <PlayheadReadout />
+        </span>
+      </div>
+      <div ref={containerRef} className="waveform" />
+    </div>
+  );
+}
+
+/** Own subscription, so play state doesn't re-render the wavesurfer host. */
+function PlayPause() {
+  const isPlaying = useStore((s) => s.isPlaying);
+  return (
+    <button onClick={() => wsCtrl()?.playPause()} title="Play / pause (Enter)">
+      {isPlaying ? '⏸ Pause' : '▶ Play'}
+    </button>
+  );
+}
+
+/** Likewise: the playhead ticks ~60/s and nothing else should follow it. */
+function PlayheadReadout() {
+  const t = useStore((s) => s.playheadSec);
+  return <strong>{t.toFixed(2)}s</strong>;
 }
 
 export function wsCtrl() {

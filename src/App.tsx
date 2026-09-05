@@ -4,7 +4,8 @@ import { AudioPicker } from './components/AudioPicker';
 import { Waveform } from './components/Waveform';
 import { LyricsPane } from './components/LyricsPane';
 import { Timeline } from './components/Timeline';
-import { Toolbar } from './components/Toolbar';
+import { ExportActions } from './components/ExportActions';
+import { ResetTiming } from './components/ResetTiming';
 import { ProjectDrop } from './components/ProjectDrop';
 import { HelpModal } from './components/HelpModal';
 import { wsCtrl } from './components/Waveform';
@@ -19,12 +20,6 @@ import './App.css';
 function stampTime(): number | null {
   const ws = wsCtrl();
   return ws ? ws.getCurrentTime() : null;
-}
-
-/** Own subscription, so the per-frame playhead doesn't re-render the app. */
-function PlayheadReadout() {
-  const t = useStore((s) => s.playheadSec);
-  return <strong>{t.toFixed(2)}s</strong>;
 }
 
 export default function App() {
@@ -147,8 +142,14 @@ export default function App() {
     <div className="app">
       <ProjectDrop />
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
-      <header className="app-header">
+      <header className="app-bar">
         <h1>lyric-timer</h1>
+        <span className="panel-spacer" />
+        {/* Nothing to save until a track is open, so the group waits for one. */}
+        {audioUrl && <ExportActions />}
+        <button className="help-btn" onClick={() => setHelpOpen(true)} title="Keyboard shortcuts (? or F1)">
+          ?
+        </button>
       </header>
 
       {!audioUrl ? (
@@ -157,15 +158,18 @@ export default function App() {
         <AudioPicker />
       ) : (
         <>
-          <Toolbar onShowHelp={() => setHelpOpen(true)} />
           <Waveform audioUrl={audioUrl} />
           <Timeline />
-          <div className="main-grid">
-            <LyricsPane />
+          <div className="panel lyrics-panel">
+            <div className="panel-head">
+              <span className="panel-title">Lyrics</span>
+              <span className="panel-spacer" />
+              <ResetTiming />
+            </div>
+            <div className="lyrics-body">
+              <LyricsPane />
+            </div>
           </div>
-          <footer className="app-footer">
-            Playhead: <PlayheadReadout />
-          </footer>
         </>
       )}
     </div>

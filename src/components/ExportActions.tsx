@@ -1,30 +1,18 @@
 import { useStore } from '../store';
-import { wsCtrl } from './Waveform';
 import { SplitButton } from './SplitButton';
 import { toJSON, toLRC, toEnhancedLRC, toSRT, toWordSRT, download } from '../export';
 
-export function Toolbar({ onShowHelp }: { onShowHelp: () => void }) {
-  const isPlaying = useStore((s) => s.isPlaying);
+/** The save group in the top bar: one plain button and two split families. */
+export function ExportActions() {
   const lineCount = useStore((s) => s.lines.length);
-  const resetTiming = useStore((s) => s.resetTiming);
   const projJSON = useStore((s) => s.toJSON);
   const audioFile = useStore((s) => s.audioFile);
-
-  const play = () => wsCtrl()?.play();
-  const pause = () => wsCtrl()?.pause();
 
   const base = audioFile?.name?.replace(/\.[^.]+$/, '') ?? 'lyrics';
   const empty = lineCount === 0;
 
   return (
-    <div className="toolbar">
-      <button onClick={isPlaying ? pause : play} disabled={empty}>
-        {isPlaying ? '⏸ Pause' : '▶ Play'}
-      </button>
-      <button onClick={resetTiming} disabled={empty}>
-        ↺ Reset timing
-      </button>
-      <span className="spacer" />
+    <>
       <button onClick={() => download(`${base}.json`, toJSON(projJSON()), 'application/json')} disabled={empty}>
         ⬇ JSON
       </button>
@@ -60,9 +48,6 @@ export function Toolbar({ onShowHelp }: { onShowHelp: () => void }) {
           },
         ]}
       />
-      <button className="help-btn" onClick={onShowHelp} title="Keyboard shortcuts (? or F1)">
-        ?
-      </button>
-    </div>
+    </>
   );
 }

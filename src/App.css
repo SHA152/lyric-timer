@@ -24,8 +24,10 @@ body {
   padding: 24px;
 }
 
-.app-header { margin: 0 0 20px; }
-.app-header h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
+/* Top bar: the mark on the left, save + info on the right. */
+.app-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
+.app-bar h1 { margin: 0; font-size: 28px; letter-spacing: -0.5px; }
+.app-bar .help-btn { width: 30px; padding: 4px 0; font-weight: 600; }
 kbd {
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -49,34 +51,83 @@ kbd {
 .audio-picker input { display: none; }
 .audio-picker span { font-size: 18px; color: var(--muted); }
 
-.waveform {
+.waveform { padding: 12px; }
+.panel-playhead { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+.panel-playhead strong { color: var(--text); }
+
+/* A panel is a card with a header strip, a body and an optional footer strip.
+   The waveform, the timeline and the lyrics all wear it. */
+.panel {
   background: var(--panel);
   border-radius: 8px;
-  padding: 12px;
   margin-bottom: 12px;
+  overflow: hidden;
 }
-
-.toolbar {
+.panel-head,
+.panel-foot {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--panel);
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  padding: 8px 12px;
 }
-.toolbar .spacer { flex: 1; }
-.toolbar button {
+.panel-head { border-bottom: 1px solid var(--border); }
+.panel-foot { border-top: 1px solid var(--border); }
+.panel-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.panel-hint { font-size: 12px; color: var(--muted); }
+.panel-spacer { flex: 1; }
+
+/* One control size across the top bar and every panel strip. */
+.app-bar button,
+.panel-head button,
+.panel-foot button {
   background: var(--panel-2);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 8px 14px;
+  padding: 4px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
   cursor: pointer;
-  font-size: 14px;
 }
-.toolbar button:hover:not(:disabled) { border-color: var(--accent); }
-.toolbar button:disabled { opacity: 0.4; cursor: not-allowed; }
+.app-bar button:hover:not(:disabled),
+.panel-head button:hover:not(:disabled),
+.panel-foot button:hover:not(:disabled) { border-color: var(--accent); }
+.app-bar button:disabled,
+.panel-head button:disabled,
+.panel-foot button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.panel-head input,
+.panel-foot input {
+  width: 64px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+.panel-head input:focus,
+.panel-foot input:focus { outline: none; border-color: var(--accent); }
+
+.shift-bar .shift-label,
+.shift-bar .shift-unit { font-size: 13px; color: var(--muted); }
+.shift-bar .shift-unit { margin-left: -2px; }
+
+/* Two-step guard on a destructive action — see ResetTiming. */
+.confirm { display: inline-flex; align-items: center; gap: 8px; }
+.confirm-q { font-size: 12px; color: var(--muted); }
+.panel-head .confirm-yes,
+.panel-foot .confirm-yes {
+  border-color: var(--danger);
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.14);
+}
+.panel-head .confirm-yes:hover,
+.panel-foot .confirm-yes:hover { background: rgba(239, 68, 68, 0.26); border-color: var(--danger); }
 
 /* Wide half = the default export, caret = the rest of the family. */
 .split-button { position: relative; display: inline-flex; }
@@ -126,13 +177,6 @@ kbd {
   margin-top: 2px;
   color: var(--muted);
   font-size: 12px;
-}
-
-.toolbar .help-btn {
-  margin-left: 4px; /* a beat of air, so it reads apart from the export family */
-  width: 34px;
-  padding: 8px 0;
-  font-weight: 600;
 }
 
 /* Shortcut reference — hidden until asked for, by button or by ? / F1. */
@@ -200,9 +244,7 @@ kbd {
 .help-keys { white-space: nowrap; }
 .help-sep { color: var(--muted); font-size: 12px; }
 
-.main-grid {
-  background: var(--panel);
-  border-radius: 8px;
+.lyrics-body {
   padding: 16px;
   max-height: 60vh;
   overflow-y: auto;
@@ -270,14 +312,6 @@ kbd {
   box-shadow: 0 0 0 1px rgba(147, 197, 253, 0.45);
 }
 .word-current.word-stamped { color: #f0f6ff; background: rgba(59, 130, 246, 0.5); }
-
-.app-footer {
-  margin-top: 16px;
-  text-align: right;
-  color: var(--muted);
-  font-family: ui-monospace, monospace;
-  font-size: 13px;
-}
 
 /* Drag a saved project .json anywhere onto the page. */
 .drop-overlay {
