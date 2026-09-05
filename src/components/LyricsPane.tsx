@@ -17,6 +17,8 @@ export function LyricsPane() {
   const currentWord = useStore((s) => s.currentWord);
   const selectWord = useStore((s) => s.selectWord);
   const moveWord = useStore((s) => s.moveWord);
+  const splitLine = useStore((s) => s.splitLine);
+  const mergeLineUp = useStore((s) => s.mergeLineUp);
   const lyricsRaw = useStore((s) => s.lyricsRaw);
   const setLyricsRaw = useStore((s) => s.setLyricsRaw);
   const rebuildLinesFromRaw = useStore((s) => s.rebuildLinesFromRaw);
@@ -194,6 +196,26 @@ export function LyricsPane() {
 
   const dragged = dragFrom ? lines[dragFrom.li]?.words[dragFrom.wi] : null;
 
+  /**
+   * The gap between two words. It is both the split handle — a generous strip
+   * to aim at, lit on hover, cut by a double click — and, mid-drag, the mark
+   * showing where the carried word would land. One element for both so the line
+   * doesn't reflow the moment a drag starts.
+   */
+  const slot = (li: number, i: number, last: number) => {
+    const inner = i > 0 && i < last;
+    return (
+      <span
+        key={`s${i}`}
+        className={`slot ${inner ? 'slot-split' : ''} ${
+          dropAt?.li === li && dropAt.wi === i ? 'slot-drop' : ''
+        }`}
+        onDoubleClick={inner ? () => splitLine(li, i) : undefined}
+        title={inner ? 'Double-click to split the line here' : undefined}
+      />
+    );
+  };
+
   return (
     <div className={`lyrics-pane ${dragFrom ? 'lyrics-pane-dragging' : ''}`} ref={paneRef}>
       {lines.map((line, li) => (
@@ -203,7 +225,13 @@ export function LyricsPane() {
           ref={li === currentLine ? activeRef : undefined}
           className={`line ${li === currentLine ? 'line-active' : ''}`}
         >
-          <span className="line-no">{li + 1}</span>
+          <span
+            className={`line-no ${li > 0 ? 'line-no-merge' : ''}`}
+            onDoubleClick={li > 0 ? () => mergeLineUp(li) : undefined}
+            title={li > 0 ? `Double-click to glue this line onto line ${li}` : undefined}
+          >
+            {li + 1}
+          </span>
           <span className="line-text">
             {line.words.map((w, wi) => {
               const stamped = w.startSec > 0;
@@ -212,8 +240,8 @@ export function LyricsPane() {
               const selected = li === currentLine && wi === currentWord;
               const lifted = dragFrom?.li === li && dragFrom.wi === wi;
               return (
-                <span key={wi}>
-                  {dropAt?.li === li && dropAt.wi === wi && <span className="drop-caret" />}
+                <span key={wi} className="slot-word">
+                  {slot(li, wi, line.words.length)}
                   <span
                     data-wi={wi}
                     className={`word ${stamped ? 'word-stamped' : ''} ${open ? 'word-open' : ''} ${
@@ -234,8 +262,8 @@ export function LyricsPane() {
                 </span>
               );
             })}
-            {/* the slot past the last word */}
-            {dropAt?.li === li && dropAt.wi >= line.words.length && <span className="drop-caret" />}
+            {/* the gap past the last word — a drop target, never a cut */}
+            {slot(li, line.words.length, line.words.length)}
           </span>
         </div>
       ))}

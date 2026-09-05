@@ -345,17 +345,45 @@ kbd {
   transform: translate3d(-9999px, -9999px, 0);
 }
 
-/* where the brick would land */
-.drop-caret {
+/* --- the gap between two words ------------------------------------------ */
+
+/* A strip wide enough to hit without aiming. It shows the cut line on hover and
+   the landing mark mid-drag, and it holds the same width either way so a line
+   never reflows under the cursor. */
+.slot-word { display: inline-block; }
+.slot {
+  position: relative;
   display: inline-block;
+  width: 14px;
+  height: 1.7em;
+  /* eats most of the words' own margins, so the strip costs almost no width */
+  margin: 0 -5px;
+  vertical-align: -0.55em;
+}
+.slot-split { cursor: col-resize; }
+.slot::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
   width: 2px;
-  height: 1.15em;
-  margin: 0 1px;
-  vertical-align: -0.25em;
+  margin-left: -1px;
   border-radius: 1px;
+  background: transparent;
+  transition: background 0.1s;
+}
+.slot-split:hover::after { background: rgba(147, 197, 253, 0.85); }
+/* Where the carried brick would land. Written with both classes so it outranks
+   the hover mark — mid-drag the cursor sits on the very slot it's aiming at. */
+.slot.slot-drop::after {
   background: #93c5fd;
   box-shadow: 0 0 6px rgba(147, 197, 253, 0.8);
 }
+
+/* Double-clicking the number glues the line onto the one above it. */
+.line-no-merge { cursor: pointer; }
+.line-no-merge:hover { color: #93c5fd; }
 
 /* Drag a saved project .json anywhere onto the page. */
 .drop-overlay {

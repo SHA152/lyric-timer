@@ -164,7 +164,8 @@ export default function App() {
             <div className="panel-head">
               <span className="panel-title">Lyrics</span>
               <span className="panel-hint">
-                click&nbsp;=&nbsp;select · drag&nbsp;a&nbsp;word&nbsp;=&nbsp;re-order it, timing and all
+                click&nbsp;=&nbsp;select · drag&nbsp;a&nbsp;word&nbsp;=&nbsp;re-order it, timing and all ·
+                double-click&nbsp;between&nbsp;words&nbsp;=&nbsp;split the line, on&nbsp;the&nbsp;number&nbsp;=&nbsp;glue it to the one above
               </span>
               <span className="panel-spacer" />
               <ResetTiming />

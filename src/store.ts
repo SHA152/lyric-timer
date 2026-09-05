@@ -27,6 +27,8 @@ interface State {
 
   selectWord: (lineIndex: number, wordIndex: number) => void;
   moveWord: (from: WordPos, to: WordPos) => void;
+  splitLine: (lineIndex: number, wordIndex: number) => void;
+  mergeLineUp: (lineIndex: number) => void;
   stepSelection: (dir: 1 | -1) => void;
   stampNextWord: (timeSec: number) => void;
   setEndAtSelection: (timeSec: number) => void;
@@ -67,6 +69,20 @@ function syncLine(l: Line) {
 
 function cloneLines(lines: Line[]): Line[] {
   return lines.map((l) => ({ ...l, words: l.words.map((w) => ({ ...w })) }));
+}
+
+/**
+ * Everything that has to be true again once words have moved between lines:
+ * numbering, each line's text and envelope, and the raw box that mirrors them.
+ * Mutates and returns the patch to hand to set().
+ */
+function reflow(lines: Line[]) {
+  lines.forEach((l, i) => {
+    l.index = i;
+    l.text = l.words.map((w) => w.text).join(' ');
+    syncLine(l);
+  });
+  return { lines, lyricsRaw: lines.map((l) => l.text).join('\n') };
 }
 
 /** Words form one sequence across lines; null means we're at an end of it. */
@@ -150,19 +166,66 @@ export const useStore = create<State>((set, get) => ({
     const kept = emptied ? newLines.filter((_, i) => i !== from.li) : newLines;
     const landedLine = emptied && to.li > from.li ? to.li - 1 : to.li;
 
-    kept.forEach((l, i) => {
-      l.index = i;
-      l.text = l.words.map((w) => w.text).join(' ');
-      syncLine(l);
-    });
-
     set({
-      lines: kept,
-      lyricsRaw: kept.map((l) => l.text).join('\n'),
+      ...reflow(kept),
       // The selection rides along with the brick.
       currentLine: landedLine,
       currentWord: di,
     });
+  },
+
+  /**
+   * Cut one line in two at `wordIndex` — the word at that index opens the new
+   * line. Only the grouping changes; every word keeps its own stamps, so a line
+   * that was pasted in wrong can be fixed after it has been timed.
+   */
+  splitLine: (lineIndex, wordIndex) => {
+    const { lines, currentLine, currentWord } = get();
+    const line = lines[lineIndex];
+    // A cut at either end would only buy an empty line.
+    if (!line || wordIndex <= 0 || wordIndex >= line.words.length) return;
+
+    const newLines = cloneLines(lines);
+    const tail = newLines[lineIndex].words.splice(wordIndex);
+    newLines.splice(lineIndex + 1, 0, {
+      index: lineIndex + 1,
+      text: '',
+      startSec: 0,
+      endSec: 0,
+      words: tail,
+    });
+
+    // Keep the same word selected, wherever the cut left it.
+    let li = currentLine;
+    let wi = currentWord;
+    if (currentLine > lineIndex) li += 1;
+    else if (currentLine === lineIndex && currentWord >= wordIndex) {
+      li += 1;
+      wi -= wordIndex;
+    }
+
+    set({ ...reflow(newLines), currentLine: li, currentWord: wi });
+  },
+
+  /** Glue a line onto the end of the one above it — the undo of a split. */
+  mergeLineUp: (lineIndex) => {
+    const { lines, currentLine, currentWord } = get();
+    if (lineIndex <= 0 || !lines[lineIndex] || !lines[lineIndex - 1]) return;
+
+    const newLines = cloneLines(lines);
+    const above = newLines[lineIndex - 1];
+    const grown = above.words.length; // where the glued words start
+    above.words = above.words.concat(newLines[lineIndex].words);
+    newLines.splice(lineIndex, 1);
+
+    let li = currentLine;
+    let wi = currentWord;
+    if (currentLine === lineIndex) {
+      li -= 1;
+      wi += grown;
+    } else if (currentLine > lineIndex) li -= 1;
+
+    set({ ...reflow(newLines), currentLine: li, currentWord: wi });
   },
 
   stepSelection: (dir) => {
