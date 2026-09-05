@@ -274,9 +274,11 @@ export const useStore = create<State>((set, get) => ({
     const earliest = Math.min(...times);
     const latest = Math.max(...times);
 
+    // The room clamps are floored at 0: a take that already sits outside the
+    // track shouldn't have a nudge flipped into the opposite direction.
     let d = deltaSec;
-    if (d < 0) d = Math.max(d, MIN - earliest);
-    if (d > 0 && audioDuration > 0) d = Math.min(d, audioDuration - latest);
+    if (d < 0) d = Math.max(d, Math.min(0, MIN - earliest));
+    if (d > 0 && audioDuration > 0) d = Math.min(d, Math.max(0, audioDuration - latest));
     if (d === 0) return;
 
     const newLines = cloneLines(lines);
@@ -303,14 +305,19 @@ export const useStore = create<State>((set, get) => ({
       currentWord: 0,
     })),
 
+  /**
+   * Replace the whole take with a saved project. A duration already measured
+   * from the loaded audio wins over the one in the file — that one may have
+   * been written against a different cut, and the timeline scales by it.
+   */
   loadProject: (p) =>
-    set({
+    set((s) => ({
       lines: p.lines,
-      audioDuration: p.audio.durationSec,
+      audioDuration: s.audioDuration > 0 ? s.audioDuration : p.audio.durationSec,
       lyricsRaw: p.lines.map((l) => l.text).join('\n'),
       currentLine: 0,
       currentWord: 0,
-    }),
+    })),
 
   toJSON: () => {
     const { audioFile, audioDuration, lines } = get();

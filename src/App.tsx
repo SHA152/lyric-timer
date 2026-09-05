@@ -6,6 +6,7 @@ import { LyricsPane } from './components/LyricsPane';
 import { Timeline } from './components/Timeline';
 import { Toolbar } from './components/Toolbar';
 import { ShiftBar } from './components/ShiftBar';
+import { ProjectDrop } from './components/ProjectDrop';
 import { wsCtrl } from './components/Waveform';
 import './App.css';
 
@@ -106,6 +107,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <ProjectDrop />
       <header className="app-header">
         <h1>lyric-timer</h1>
         <p className="tagline">
