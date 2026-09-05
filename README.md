@@ -9,6 +9,7 @@ Built because every existing tool is either paywalled, abandoned, or designed ar
 - 🎵 Waveform-based audio scrubbing (WaveSurfer.js v7)
 - ⌨️ Tap-to-stamp keyboard workflow — press a key when you hear each word
 - ✏️ Edit any timestamp by dragging it on the waveform
+- 🧱 Drag a word in the lyrics pane to re-order it or move it to another line — its timing rides along
 - 📦 Export to **JSON** (with word-level timing), **LRC** (line-level), or **SRT** (subtitle)
 - 💾 Auto-saves to your browser; no server, no account, no tracking
 - 🤖 (Coming) Optional WhisperX auto-alignment for a first-pass draft

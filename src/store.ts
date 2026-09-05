@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import type { Line, LyricProject } from './types';
 
+/** A word's place in the take: line index + index within that line. */
+export interface WordPos {
+  li: number;
+  wi: number;
+}
+
 interface State {
   audioFile: File | null;
   audioUrl: string | null;
@@ -20,6 +26,7 @@ interface State {
   setPlaying: (p: boolean) => void;
 
   selectWord: (lineIndex: number, wordIndex: number) => void;
+  moveWord: (from: WordPos, to: WordPos) => void;
   stepSelection: (dir: 1 | -1) => void;
   stampNextWord: (timeSec: number) => void;
   setEndAtSelection: (timeSec: number) => void;
@@ -113,6 +120,49 @@ export const useStore = create<State>((set, get) => ({
     const { lines } = get();
     if (!lines[lineIndex]?.words[wordIndex]) return;
     set({ currentLine: lineIndex, currentWord: wordIndex });
+  },
+
+  /**
+   * Pull one word out of its line and drop it back in at `to` — the lyrics
+   * pane's drag. The word keeps whatever timing it already carries: the brick
+   * is the word *and* its stamps, so fixing a bad line split doesn't cost the
+   * work already done on it. `to.wi` is read against the destination as it
+   * looks on screen, i.e. before the word is taken out.
+   */
+  moveWord: (from, to) => {
+    const { lines } = get();
+    if (!lines[from.li]?.words[from.wi] || !lines[to.li]) return;
+
+    let di = Math.max(0, Math.min(to.wi, lines[to.li].words.length));
+    if (to.li === from.li) {
+      // Lifting the word first shifts every later slot of this line one left.
+      if (di > from.wi) di -= 1;
+      if (di === from.wi) return; // dropped back where it came from
+    }
+
+    const newLines = cloneLines(lines);
+    const [word] = newLines[from.li].words.splice(from.wi, 1);
+    newLines[to.li].words.splice(di, 0, word);
+
+    // A line that lost its last word has nothing left to time or export, and
+    // an empty row is only in the way — drop it and renumber what follows.
+    const emptied = from.li !== to.li && newLines[from.li].words.length === 0;
+    const kept = emptied ? newLines.filter((_, i) => i !== from.li) : newLines;
+    const landedLine = emptied && to.li > from.li ? to.li - 1 : to.li;
+
+    kept.forEach((l, i) => {
+      l.index = i;
+      l.text = l.words.map((w) => w.text).join(' ');
+      syncLine(l);
+    });
+
+    set({
+      lines: kept,
+      lyricsRaw: kept.map((l) => l.text).join('\n'),
+      // The selection rides along with the brick.
+      currentLine: landedLine,
+      currentWord: di,
+    });
   },
 
   stepSelection: (dir) => {
