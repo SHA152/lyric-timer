@@ -27,6 +27,7 @@ interface State {
   clearAndStepBack: () => void;
   setWordTime: (lineIndex: number, wordIndex: number, startSec: number, endSec: number) => void;
   setLineTimes: (lineIndex: number, times: { startSec: number; endSec: number }[]) => void;
+  shiftAll: (deltaSec: number) => void;
   resetTiming: () => void;
   loadProject: (p: LyricProject) => void;
   toJSON: () => LyricProject;
@@ -251,6 +252,41 @@ export const useStore = create<State>((set, get) => ({
       w.endSec = t.endSec;
     });
     syncLine(newLines[lineIndex]);
+
+    set({ lines: newLines });
+  },
+
+  /**
+   * Nudge every stamped word by the same delta. The delta is clamped as a whole
+   * (rather than per word) so the relative timing of the take survives a nudge
+   * that would otherwise push the first word past 0 or the last past the track.
+   * A 0 means "not stamped yet", so untimed words are left alone.
+   */
+  shiftAll: (deltaSec) => {
+    const { lines, audioDuration } = get();
+    if (!deltaSec) return;
+
+    const stamped = lines.flatMap((l) => l.words).filter((w) => w.startSec > 0 || w.endSec > 0);
+    if (stamped.length === 0) return;
+
+    const MIN = 0.001; // stay above 0, which would read back as "not stamped"
+    const times = stamped.flatMap((w) => [w.startSec, w.endSec].filter((t) => t > 0));
+    const earliest = Math.min(...times);
+    const latest = Math.max(...times);
+
+    let d = deltaSec;
+    if (d < 0) d = Math.max(d, MIN - earliest);
+    if (d > 0 && audioDuration > 0) d = Math.min(d, audioDuration - latest);
+    if (d === 0) return;
+
+    const newLines = cloneLines(lines);
+    newLines.forEach((l) => {
+      l.words.forEach((w) => {
+        if (w.startSec > 0) w.startSec += d;
+        if (w.endSec > 0) w.endSec += d;
+      });
+      syncLine(l);
+    });
 
     set({ lines: newLines });
   },
