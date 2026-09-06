@@ -24,6 +24,8 @@ if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(version)) {
 
 // Rewrites textually so key order and formatting survive, and stays idempotent:
 // a file already at `version` matches the pattern and is simply rewritten as-is.
+// Every line break in a pattern must be `\r?\n`: the Windows runner checks out
+// with autocrlf, so a literal `\n` matches nothing there.
 function patch(rel, ...patterns) {
   const path = join(root, rel)
   let text = readFileSync(path, 'utf8')
@@ -38,13 +40,13 @@ patch('package.json', /("version"\s*:\s*)"[^"]*"/)
 // Both root copies, or `npm ci` sees package.json and the lockfile disagree.
 patch(
   'package-lock.json',
-  /^(\{\s*\n\s*"name":\s*"[^"]*",\s*\n\s*"version":\s*)"[^"]*"/,
-  /("":\s*\{\s*\n\s*"name":\s*"[^"]*",\s*\n\s*"version":\s*)"[^"]*"/,
+  /^(\{\s*\r?\n\s*"name":\s*"[^"]*",\s*\r?\n\s*"version":\s*)"[^"]*"/,
+  /("":\s*\{\s*\r?\n\s*"name":\s*"[^"]*",\s*\r?\n\s*"version":\s*)"[^"]*"/,
 )
 patch('src-tauri/tauri.conf.json', /("version"\s*:\s*)"[^"]*"/)
 // Only the [package] section's version, never a dependency's.
-patch('src-tauri/Cargo.toml', /(\[package\][^[]*?\nversion\s*=\s*)"[^"]*"/)
+patch('src-tauri/Cargo.toml', /(\[package\][^[]*?\r?\nversion\s*=\s*)"[^"]*"/)
 // Keep the lockfile in step so a `--locked` build cannot fail on the bump.
-patch('src-tauri/Cargo.lock', /(name = "lyric-timer"\nversion\s*=\s*)"[^"]*"/)
+patch('src-tauri/Cargo.lock', /(name = "lyric-timer"\r?\nversion\s*=\s*)"[^"]*"/)
 
 console.log(`version set to ${version}`)

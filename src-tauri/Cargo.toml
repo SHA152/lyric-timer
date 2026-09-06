@@ -1,6 +1,6 @@
 [package]
 name = "lyric-timer"
-version = "0.2.1"
+version = "0.2.2"
 description = "Per-word lyric timing tool"
 authors = ["Alexey Lysenko"]
 license = "MIT"
